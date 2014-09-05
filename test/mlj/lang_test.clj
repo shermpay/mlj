@@ -1,6 +1,6 @@
-(ns mlj.core-test
+(ns mlj.lang-test
   (:require [clojure.test :refer :all]
-            [mlj.core :as ml]))
+            [mlj.lang :as ml]))
 
 (deftest fn-test
   (testing "ml/fn"
@@ -31,4 +31,9 @@
              in
              (+ x y)
              end)
-           3))))
+           3))
+    (is (= (ml/let [val x :int = 1
+                    val y :int = 2]
+             in
+             (+ x y)
+             end) 3) "typed version")))
