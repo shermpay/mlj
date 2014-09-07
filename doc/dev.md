@@ -26,14 +26,18 @@ checked as well.
 Symbols should be assigned types of some form
 
 ### Compiler
+Multiple components comprising of *2* major phases.
+#### Clojure Compilation
 A very lightweight compiler, current idea is to parenthesize
-expressions. Most builtin keywords hav a start and end delimiter.
-Example:
-```sml
-if true then
-1
-else
-2
+expressions and transform Expressions into S-Expressions recognized by Clojure.  
+> (Building String representation of ASTs)
+
+Another way is to create a huge macro called sml and wrap everything into it.
+And to **compile** the program is to just wrap everything in it.
+This approach is challenging in ways, but the benefits seem huge. Because within
+the macro, I would be able to do complex transformations, type checking etc.
+
+Example: ```sml if true then 1 else 2
 ```  
 Can be translated to
 ```clojure
@@ -42,6 +46,36 @@ Can be translated to
 
 Translate () to []? Tuples as Vectors
 Translate #a to :a? Index Tuples/Records
+
+#### Macro Transformation phase
+Utilizing Clojure Macros to construct valid Clojure Builtin Forms.
+This phase consists of 2 components:
+* Transformation
+* Type Checker
+
+### Type System
+*Type System* should be completely **static**, **Hindley Milner**.
+> Not sure if achievable, but this mimics SML the most.
+
+The *Type System* is part of the second macro transformation phase to achieve staticness.
+> Plan of attack! Built the type system with zero inference.
+Two possible ideas to type checking.
+* ML functions as Clojure macros which include a type checker.
+* A macro that inspects the namespace, and type checks every form.
+> Both approach seem fairly complex, the second one seems more extensible and feasible.
+
+#### Type Declarations
+Any where a binding can be introduced
+- `let`
+Syntax
+```sml
+let
+	[val x :T = expr]
+in
+	x
+end
+```
+Type checking expr to match type T, then erase the types.
 
 ## Implemented Functionality
 #### Keywords

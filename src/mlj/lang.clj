@@ -1,12 +1,14 @@
 (ns mlj.lang
   "Core ML Syntax Macro forms."
   {:collect-only false}
-  (:require [clojure.core :as c :reload true]
-            [clojure.core.match :refer [match]]
-            [mlj.type :as t]))
+  (:require [clojure.core :as c]
+            [clojure.core.match :refer [match]]))
 
 (alias 'ml 'mlj.lang)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Globally useful functions ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ^:private substring
   "substring"
   ([^String st ^long i]
@@ -14,81 +16,72 @@
   ([^String st ^long s ^long e]
      (.substring st s e)))
 
-;;; Globally useful functions
 (defn ^:private unqual-sym
   [sym]
   (c/let [s (str sym)]
-   (symbol (substring s (inc (.indexOf s (int \/)))))))
+   (symbol (substring s (inc (.indexOf s (c/int \/)))))))
 
-;;; Syntax macros
-(defmacro fn
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Lanauge Syntax Definitions ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro ^:mlj fn
   "Define a ML lambda.
   Example:
   fn x => x"
-  [param arrow & body]
+  [param => & body]
   `(c/fn [~param]
-     ~@(if (not= (unqual-sym arrow) (unqual-sym '=>))
+     ~@(if (not= => '=>)
          (throw (NoSuchMethodException.
-                 (str "Syntax Error: FUN requires =>; Got " arrow)))
+                 (str "Syntax Error: FN requires =>; Got " =>)))
          body)))
 
-(defmacro if
+(defmacro ^:mlj if
   "ML if.
   Example: if pred then if-expr else else-expr"
-  [pred then-sym if-expr else-sym else-expr]
-  (cond (not= then-sym (unqual-sym 'then))
+  [pred then if-expr else else-expr]
+  (cond (not= then 'then)
         (throw (NoSuchMethodException.
-                (str "Syntax Error: IF expected THEN; Got " then-sym)))
-        (not= else-sym (unqual-sym else-sym))
+                (str "Syntax Error: IF expected THEN; Got " then)))
+        (not= else 'else)
         (throw (NoSuchMethodException.
-                (str "Syntax Error: IF expected ELSE; Got " else-sym)))
+                (str "Syntax Error: IF expected ELSE; Got " else)))
         :else `(if ~pred
                  ~if-expr
                  ~else-expr)))
 
-(defmacro val
+(defmacro ^:mlj val
   "ML val keyword. Binds a symbol to a value."
-  [sym eq-sym v]
-  (if (not= (unqual-sym eq-sym) (unqual-sym '=))
+  [sym t = expr]
+  (if (not= = '=)
     (throw (NoSuchMethodException.
-            (str "Syntax Error: VAL expected =; Got " eq-sym)))
-    `(def ~sym ~v)))
+            (str "Syntax Error: VAL expected =; Got " =)))
+    `(do
+       (def ~sym  ~expr)
+       (alter-meta! #'~sym assoc :type '~t)
+       '~sym)))
 
-(defmacro fun
+(defmacro ^:mlj fun
   "Define a ML named function."
-  [name param eq-sym expr]
-  `(val ~name ~eq-sym (ml/fn ~(unqual-sym param) => ~expr)))
+  [name param type-sig = expr]
+  `(do
+     (val ~name ~type-sig ~= ~(ml/fn param => expr))
+     (alter-meta! #'~name assoc :arglists '~(conj '() [param]))
+     '~name))
 
 ;;; Helper functions for let
 (defn ^:private let-pair?
-  "Pair of bindings let. Takes in a vector of argument and its
-  index. Returns true if it is a part of a let pair"
+  "Pair of bindings let. Takes in a vector of index and argument.
+  Returns true if it is a part of a let pair"
   [[i x]]
   (c/let [m (mod i 4)]
     (or (= m 1) (= m 3))))
-
-(defn ^:private type-check
-  "Core local type checking function. Consider moving mlj.typed.
-  Requires splitting. Type checking and Type Erasure."
-  [binding-exprs]
-  (loop [[val-sym sym x y & other] binding-exprs
-         m {}]
-    (cond (nil? other) true
-          (t/type? x) (if (t/check-type (first other) x)
-                        (recur (rest other) (assoc m sym x))
-                        (throw (IllegalArgumentException.
-                                (str "Type Error: Expect " x " Got " (t/type-of
-                                                                      (first other))))))
-          (= '= x) (recur other m)
-          :else (throw (NoSuchMethodException.
-                        (str "Syntax Error: LET " x " ; Expecting = or type decl"))))))
 
 (defn ^:private check-binding-syntax
   "Checks the let binding portion of the syntax"
   [v]
   (not-any? false?
             (map-indexed
-                    #(cond
+                    #(cond 
                       (even? %1) (= %2 (unqual-sym 'val))
                       (odd? %1) (= %2 (unqual-sym '=))
                       :else (throw (NoSuchMethodException. "index should be a number")))
@@ -99,21 +92,20 @@
   [v]
   (into [] (keep-indexed #(if (let-pair? [%1 %2]) %2) v)))
 
-(defmacro let
+(defmacro ^:mlj ^:dynamic let
   "ML let keyword. Example: let bindings in expr end"
-  [bindings in-sym expr end-sym]
-  (type-check bindings)
-  (c/let [bindings (remove keyword? bindings)]
+  [bindings in expr end]
+  (c/let [bindings bindings]
     (cond
      (not (check-binding-syntax bindings))
      (throw (NoSuchMethodException.
-             (str "Syntax Error: LET requires bindings of the form val symbol = value;" 
+             (str "Syntax Error: LET requires bindings of the form val symbol :T = value;" 
                   "Got " bindings)))
-     (not= (unqual-sym in-sym) (unqual-sym 'in))
+     (not= in 'in)
      (throw (NoSuchMethodException.
              (str "Syntax Error: LET requires IN keyword after bindings."
                   bindings)))
-     (not= (unqual-sym end-sym) (unqual-sym 'end))
+     (not= end 'end)
      (throw (NoSuchMethodException.
              (str "Syntax Error: LET required END keyword at the close."
                   bindings)))
@@ -129,17 +121,26 @@
          (odd? %1) (= (unqual-sym %2) (unqual-sym '|)))
   (keep-indexed #(if (odd? %1) %2) '(0 => 1 | 1 => 2 | _ => 3)))))
 
-(defmacro case
+(defmacro ^:mlj case
   "ML case keyword for pattern matching.
   Example: 
         case x of 0 => 1 
                 | 1 => 2 
                 | _ => x"
-  [m-exp of-sym & exprs]
-  (cond (not= (unqual-sym of-sym) (unqual-sym 'of))
+  [m-exp of & exprs]
+  (cond (not= unqual-sym of 'of)
         (throw (NoSuchMethodException. (str "Syntax Error: CASE requires OF keyword.")))
         (check-pattern-exp exprs)
         (throw (NoSuchMethodException. (str "Syntax Error: Pattern invalid.")))
         :else `(match ~m-exp
            ~@exprs)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Expose Language Meta Data ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(def keywords (into {}
+                    (filter #(:mlj (meta (% 1)))
+                            (ns-publics *ns*))))
+
+(def syntax '#{then else in end = val})
 
