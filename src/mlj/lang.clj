@@ -1,11 +1,11 @@
 (ns mlj.lang
   "Core ML Syntax Macro forms."
   {:collect-only false}
+  (:refer-clojure :exclude [fn val let case])
   (:require [clojure.core :as c]
             [clojure.core.match :refer [match]]))
 
 (alias 'ml 'mlj.lang)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Globally useful functions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -49,19 +49,55 @@
                  ~if-expr
                  ~else-expr)))
 
+;;; Type Signature parsing
+(def ^:private typesigs #{:prim :tuple :fn})
+(defn typesig-type
+  "Takes a typesig and returns its type.
+  Clojure vectors represent the :tuple type, Clojure lists represent the function type."
+  [tsig]
+  (cond (vector? tsig) :tuple
+        (list? tsig) :fn
+        :else :prim))
+
+(defn parse-fn-typesig
+  " Takes in a Function type signature and parses it to return a
+  function form Function types will be stored as '([tuple] return),
+  list as function types.
+  Example:
+  :int = :int
+  [:int * :int] = [:int :int]
+  ([:int * :int] -> :int) = ([:int * :int] :int)
+  ([:int * :int] -> :int -> :int) = ([:int * :int] (:int :int))
+  ([:int * :int] -> :int -> :int -> :int) = ([:int * :int] (:int (:int :int))) "
+  [tsig]
+  (c/let [t (->> tsig
+               (filter #(not= '-> %))
+               reverse)]
+    (reduce #(cons %2 (list %1)) t)))
+
+(defn parse-typesig
+  "Parse any form of type signature"
+  [tsig]
+  (c/case (typesig-type tsig)
+    :prim tsig
+    :tuple (vec (map parse-typesig
+                     (filter #(not= '* %) tsig)))
+    :fn (map parse-typesig
+             (parse-fn-typesig tsig))))
+
 (defmacro ^:mlj val
-  "ML val keyword. Binds a symbol to a value."
+  "ML val keyword. Binds a symbol to a value. t is the type declaration."
   [sym t = expr]
   (if (not= = '=)
     (throw (NoSuchMethodException.
             (str "Syntax Error: VAL expected =; Got " =)))
     `(do
        (def ~sym  ~expr)
-       (alter-meta! #'~sym assoc :type '~t)
+       (alter-meta! #'~sym assoc :type '~(parse-typesig t))
        '~sym)))
 
 (defmacro ^:mlj fun
-  "Define a ML named function."
+  "Define a ML named function. Type Signatures should be of form: ([:int * :int] -> :int)."
   [name param type-sig = expr]
   `(do
      (val ~name ~type-sig ~= ~(ml/fn param => expr))

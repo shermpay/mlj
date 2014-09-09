@@ -1,8 +1,10 @@
 (ns mlj.type
   "ML (Hindley Milner) type system."
-  (:require [mlj.lang :as ml])
+  (:require [mlj.lang :as ml]
+            [mlj.core :as core])
   (:gen-class))
 
+(declare type-of)
 (def ^:dynamic *type-map* {:int {:type java.lang.Long
                                 :fn integer?}
                            :real {:type java.lang.Double
@@ -13,17 +15,34 @@
                                    :fn string?}
                            :char {:type java.lang.Character
                                  :fn char?}})
+(defn tuple? [v] (vector? v))
+(defn unit? [v] (and (tuple? v) (empty? v)))
+
+(defn tuple-type
+  [tuple]
+  {:pre [(tuple? tuple)]}
+  (vec (map type-of tuple)))
+
+(defn tuple-repr
+  [tuple]
+  "Converts a tuple-type obj to it's external representation. [:int :int] to [:int * :int]"
+  (interpose '* tuple))
+
 (defn type? 
   "Returns true if t is a type form."
   [t]
   (contains? *type-map* t))
 
 (defn type-of 
-  "Gets the type of a expression"
-  [x]
-  (-> (filter #((:fn (% 1)) x) *type-map*)
-      first
-      key))
+  "Gets the type of a value"
+  [v]
+  {:pre [(not (or (symbol? v) (keyword? v)))]}
+  (cond
+   (tuple? v) (tuple-type v)
+   (var? v) (var-type v)
+   :else (-> (filter #((:fn (% 1)) v) *type-map*)
+             first
+             key)))
 
 (defn check-type 
   "Check if v is of type t"
@@ -36,7 +55,25 @@
   [expr]
   true)
 
+(defn var-type
+  "Gets the type of a var"
+  [vr]
+  (-> vr
+      core/get-var
+      meta
+      :type))
+
+(defn fn-type?
+  [vr]
+  (var-type vr))
+
+(defn check-app
+  "Type checks a function application."
+  [f arg]
+  )
+
 (defn check-val
+  "Type checks a VAL declaration"
   [[val-sym sym t eq-sym v :as val-expr]]
   (if (check-type v t)
     true
@@ -60,10 +97,7 @@
 (defn check-let
   "Type check a LET expression. Returns true if valid"
   [[let-sym binding-exprs in-sym end-sym :as let-expr]]
-  (doseq [binding (partition (inc (ml/keyword-argcount 'val)) binding-exprs)]
+  (doseq [binding (partition (inc (core/count-args 'val)) binding-exprs)]
     (check-val binding))
   true)
 
-(defn check-app
-  "Type checks a function application."
-  [f args])

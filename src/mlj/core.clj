@@ -18,19 +18,19 @@
 (defn mlj-keyword?
   "Checks if sym is a mlj keyword"
   [sym]
-  (:mlj (meta (mlj-var :keyword sym))))
+  (boolean (:mlj (meta (mlj-var :keyword sym)))))
 
 (defn mlj-fn?
   "Checks if sym is a builtin mlj function"
   [sym]
-  (mlj-var :builtin sym))
+  (boolean (mlj-var :builtin sym)))
 
 (defn form-type
   "Obtain the language form type."
   [sym]
   (cond (mlj-keyword? sym) :keyword
         (mlj-fn? sym) :builtin
-        :else (throw (UnsupportedOperationException. "Unknown language construct"))))
+        :else (throw (UnsupportedOperationException. "form-type: Unknown language construct"))))
 
 (defn get-var
   "Gets the var representing the symbol."
