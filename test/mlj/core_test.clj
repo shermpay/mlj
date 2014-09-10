@@ -25,3 +25,9 @@
        'val 4
        'case 4
        'let 4))
+
+(deftest typesig-test
+  (are [sig t] (= (core/typesig-type sig) t)
+         [] :tuple
+         '() :fn
+         1 :prim))

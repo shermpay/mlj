@@ -50,6 +50,17 @@
   "Gets the count of args of a mlj keyword/function"
   [k]
   (count (get-args k)))
+
+;;; Type stuff
+(def ^:private typesigs #{:prim :tuple :fn})
+(defn typesig-type
+  "Takes a typesig and returns its type.
+  Clojure vectors represent the :tuple type, Clojure lists represent the function type."
+  [tsig]
+  (cond (vector? tsig) :tuple
+        (list? tsig) :fn
+        :else :prim))
+
 ;; (defn syntax-pos
 ;;   [k syntax]
 ;;   (.indexOf (count-args k) syntax))

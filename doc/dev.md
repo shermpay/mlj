@@ -5,8 +5,8 @@ A DSL that offers ML like semantics and syntax such as the type system, pattern
 matching, currying etc.
 
 ## Details
-- ML like Tuple/Record types
 - ML like functions
+- ML like Hindley Milner static type system
 
 ### Tuple/Record types
 `Records` are just a wrapper for Clojure `Maps`  
@@ -27,6 +27,10 @@ Symbols should be assigned types of some form
 
 ### Compiler
 Multiple components comprising of *2* major phases.
+
+Phases can be viewed as following:
+mlj forms --(mlj.compiler)--> clojure mlj.lang macros --(type-checker)--(mlj.lang)--> clojure.core forms
+
 #### Clojure Compilation
 A very lightweight compiler, current idea is to parenthesize
 expressions and transform Expressions into S-Expressions recognized by Clojure.  
@@ -45,7 +49,9 @@ Can be translated to
 ```
 
 Translate () to []? Tuples as Vectors
+> This might actually be feasible!
 Translate #a to :a? Index Tuples/Records
+> This would be more complex, but would be really nice if achievable
 
 #### Macro Transformation phase
 Utilizing Clojure Macros to construct valid Clojure Builtin Forms.
@@ -58,11 +64,24 @@ This phase consists of 2 components:
 > Not sure if achievable, but this mimics SML the most.
 
 The *Type System* is part of the second macro transformation phase to achieve staticness.
-> Plan of attack! Built the type system with zero inference.
 Two possible ideas to type checking.
 * ML functions as Clojure macros which include a type checker.
 * A macro that inspects the namespace, and type checks every form.
 > Both approach seem fairly complex, the second one seems more extensible and feasible.
+> Currently using the second approach
+
+The *Type Checker* should be part of the compiler, so the compiler comprises of the following:
+* Parser
+* Type checker
+
+*Type System* will be implemented as such:
+1. It will obtain type information of declared dependencies via the *meta-data* `:type` tag of
+the Clojure `var`.
+2. Build up a `type-map` of {`var` => type}.
+3. Iterate through the compiled expressions/declaration while doing the following:
+	- Type checks each form
+	- Adds to the `type-map` whenever it encounters a declaration
+	- Replace the `type-declaration` into a lower level form
 
 #### Type Declarations
 Any where a binding can be introduced

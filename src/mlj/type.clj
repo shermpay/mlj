@@ -1,20 +1,22 @@
 (ns mlj.type
-  "ML (Hindley Milner) type system."
+  "ML (Hindley Milner) type system.
+  Includes a static type checker that type checks valid mlj forms.
+  Also provides builtin mlj types."
   (:require [mlj.lang :as ml]
             [mlj.core :as core])
   (:gen-class))
 
 (declare type-of)
 (def ^:dynamic *type-map* {:int {:type java.lang.Long
-                                :fn integer?}
+                                :type-fn integer?}
                            :real {:type java.lang.Double
-                                 :fn float?}
+                                 :type-fn float?}
                            :bool {:type java.lang.Boolean
-                                 :fn #{true false}}
+                                 :type-fn #{true false}}
                            :string {:type java.lang.String
-                                   :fn string?}
+                                   :type-fn string?}
                            :char {:type java.lang.Character
-                                 :fn char?}})
+                                 :type-fn char?}})
 (defn tuple? [v] (vector? v))
 (defn unit? [v] (and (tuple? v) (empty? v)))
 
@@ -40,14 +42,14 @@
   (cond
    (tuple? v) (tuple-type v)
    (var? v) (var-type v)
-   :else (-> (filter #((:fn (% 1)) v) *type-map*)
+   :else (-> (filter #((:type-fn (% 1)) v) *type-map*)
              first
              key)))
 
 (defn check-type 
   "Check if v is of type t"
   [v t]
-  ((-> *type-map* t :fn) v))
+  ((-> *type-map* t :type-fn) v))
 
 (defmacro check-expr
   "Type checks an expression. 
