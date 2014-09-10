@@ -20,7 +20,7 @@
   [sym]
   (boolean (:mlj (meta (mlj-var :keyword sym)))))
 
-(defn mlj-fn?
+(defn builtin?
   "Checks if sym is a builtin mlj function"
   [sym]
   (boolean (mlj-var :builtin sym)))
@@ -29,7 +29,7 @@
   "Obtain the language form type."
   [sym]
   (cond (mlj-keyword? sym) :keyword
-        (mlj-fn? sym) :builtin
+        (builtin? sym) :builtin
         :else (throw (UnsupportedOperationException. "form-type: Unknown language construct"))))
 
 (defn get-var
@@ -46,6 +46,10 @@
       meta
       :arglists
       first))
+(defn get-type
+  [sym]
+  (type (get-var sym)))
+
 (defn count-args
   "Gets the count of args of a mlj keyword/function"
   [k]

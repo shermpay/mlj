@@ -54,7 +54,7 @@
   (loop [result []
          [hd & tl] body]
     (if (or (core/mlj-keyword? hd)
-            (core/mlj-fn? hd))
+            (core/builtin? hd))
       (let [n (core/count-args hd)]
         (case hd
           val (recur (conj result
