@@ -5,9 +5,10 @@
             [mlj.lang :as ml])
   (:gen-class))
 
+;;;;;;;;;;;;;;;;;;;;
+;; Int operations ;;
+;;;;;;;;;;;;;;;;;;;;
 (ml/fun + [x y] ([:int :int] :int) = (c/+ x y))
 (ml/fun - [x y] ([:int :int] :int) = (c/- x y))
 (ml/fun * [x y] ([:int :int] :int) = (c/* x y))
 (ml/fun / [x y] ([:int :int] :int) = (c// x y))
-
-(def builtins "Global var of map from builtin symbol -> var"(ns-publics *ns*))

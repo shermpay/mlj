@@ -7,7 +7,7 @@
   "Map for various mlj forms.
   :builtin Builtin function
   :keyword Syntax keyword"
-  {:builtin lib/builtins
+  {:builtin (ns-publics (find-ns 'mlj.lib))
    :keyword ml/keywords})
 
 (defn mlj-var
