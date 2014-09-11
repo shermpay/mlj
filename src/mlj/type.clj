@@ -51,7 +51,9 @@
 (defn type? 
   "Returns true if t is a type form."
   [t]
-  (contains? *type-map* t))
+  (if (tuple? t)
+    (not-any? false? (map type? t))
+    (contains? *type-map* t)))
 
 (defn var-type
   "Gets the type of a var"
@@ -82,7 +84,11 @@
   "Checks if v1 and v2 are the same type in env.
   Expect heavy usage for Generics."
   [v1 v2 env]
-  (= (type-of v1 env) (type-of v2 env)))
+  (let [t1 (type-of v1 env)
+        t2 (type-of v2 env)]
+    (if (or (nil? t1) (nil? t2))
+      false
+      (= t1 t2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Function Type signatures ;;
@@ -165,11 +171,9 @@
       (doseq [binding (partition (inc (core/count-args 'val)) binding-exprs)]
         (check-val binding let-env))
     (check-expr body @let-env)))
-
 (defn check-fn
   "Type checks a FN expression. Return the fn type if valid"
   [[fn-sym param [par-type ret-type :as tsig] => body] env]
-  (println tsig)
   (let [env (merge env (fn-env param par-type))
         body-type (check-expr body env)]
     (if (= body-type ret-type) 
