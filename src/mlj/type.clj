@@ -1,3 +1,6 @@
+;;;; Sherman Pay
+;;;; TODO: Add Generics
+;;;; TODO: Catch errors in helper functions
 (ns mlj.type
   "ML (Hindley Milner) type system.
   Includes a static type checker that type checks valid mlj forms.
@@ -68,7 +71,7 @@
   [v env]
   {:pre [(not (keyword? v))]}
   (cond
-   (tuple? v) (tuple-type v)
+   (tuple? v) (tuple-type v env)
    (var? v) (var-type v)
    (symbol? v) (env v)
    :else (-> (filter #((:type-fn (% 1)) v) *type-map*)
@@ -138,18 +141,6 @@
               (str "Type Error: " f " args: (" arg "), expecting: " par "\n Got: " arg-types)))
       ret)))
 
-(defn check-val
-  "Type checks a VAL declaration"
-  [[val-sym sym t eq-sym v :as val-expr] env]
-  (if (= (check-expr v @env) t)
-    (do
-      (swap! env assoc sym t)
-      t)
-    (throw (IllegalArgumentException.
-            (str "Type Error: VAL binding type mismatch."
-                 "\n\tgot: " (type-of v @env)
-                 "\n\tin: " (apply str (interpose \space val-expr)))))))
-
 (defn check-if
   "Type checks an IF expression. Returns the type of the branches if valid, else throws an exception"
   [[if-sym pred then-sym t-expr else-sym e-expr :as if-expr] env]
@@ -164,13 +155,18 @@
                 (check-expr t-expr env)
                 (check-expr e-expr env))))
 
-(defn check-let
-  "Type check a LET expression. Returns the type of the body if valid"
-  [[let-sym binding-exprs in-sym body end-sym :as let-expr] env]
-  (let [let-env (atom env)]
-      (doseq [binding (partition (inc (core/count-args 'val)) binding-exprs)]
-        (check-val binding let-env))
-    (check-expr body @let-env)))
+(defn check-val
+  "Type checks a VAL declaration"
+  [[val-sym sym t eq-sym v :as val-expr] env]
+  (if (= (check-expr v @env) t)
+    (do
+      (swap! env assoc sym t)
+      t)
+    (throw (IllegalArgumentException.
+            (str "Type Error: VAL binding type mismatch."
+                 "\n\tgot: " (type-of v @env)
+                 "\n\tin: " (apply str (interpose \space val-expr)))))))
+
 (defn check-fn
   "Type checks a FN expression. Return the fn type if valid"
   [[fn-sym param [par-type ret-type :as tsig] => body] env]
@@ -182,6 +178,18 @@
               (str "Type Error: FN return type mismatch."
                    "\n\tExpected: " ret-type
                    "\n\tGot: " body-type))))))
+(defn check-fun
+  "Type checks a FUN declaration. Return the fn type if valid"
+  [[fun-sym name param [par-type ret-type :as tsig] = body] env]
+  (check-val ['val name tsig '= (list 'fn param tsig '=> body)] env))
+
+(defn check-let
+  "Type check a LET expression. Returns the type of the body if valid"
+  [[let-sym binding-exprs in-sym body end-sym :as let-expr] env]
+  (let [let-env (atom env)]
+      (doseq [binding (partition (inc (core/count-args 'val)) binding-exprs)]
+        (check-val binding let-env))
+    (check-expr body @let-env)))
 
 (defn check-expr
   "Type checks an expression. 
@@ -189,12 +197,14 @@
   [expr env]
   (if (list? expr)
     (let [[form & body] expr]
-        (cond (core/mlj-keyword? form) (case form
-                                         val (check-val expr environment)
-                                         if (check-if expr env)
-                                         let (check-let expr env)
-                                        (throw (IllegalStateException. "Found uncheck keyword")))
-             (core/builtin? form) (check-app expr env)
-             :else ((throw (IllegalStateException. "Found uncheck form")))))
+      (cond
+       (core/mlj-keyword? form) (case form
+                                  val (check-val expr environment)
+                                  if (check-if expr env)
+                                  let (check-let expr env)
+                                  fn (check-fn expr env)
+                                  fun (check-fn expr environment)
+                                  (throw (IllegalStateException. (str "Found uncheck keyword: " form))))
+       (core/builtin? form) (check-app expr env)
+       :else ((throw (IllegalStateException. (str "Found uncheck form: " form))))))
     (type-of expr env)))
-

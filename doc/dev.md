@@ -133,5 +133,7 @@ type environments for extensive type checking of variable usage.
 Unit tests for `lang`, `type`, `core` namespace.
 
 ### Todos
+- Work on generic types
+- Work on stdlib
 - Work on `compile` namespace
 - Learn about `Local Type Inference`, attempt to implement it with `core.logic`
