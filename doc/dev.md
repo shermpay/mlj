@@ -96,11 +96,42 @@ end
 ```
 Type checking expr to match type T, then erase the types.
 
-## Implemented Functionality
-#### Keywords
-- `fn`
-- `fun`
-- `val`
-- `let`
-- `case`
-- `if`
+## Road Map
+### Syntax
+#### `fn`
+`fn param :T => body`
+- param is a single parameter or a tuple of parameters
+- :T is a Clojure keyword representing an MLJ type.
+- body is a expression
+#### `fun`
+`fun name param :T = body`  
+- param is a single parameter or a tuple of parameters (No sugared currying
+support yet
+- :T is a Clojure keyword representing an MLJ type.
+- body is an expression
+#### `val`
+`val name :T = expr`  
+- :T is a Clojure keyword representing an MLJ type.
+- expr is an expression
+#### `let`
+`let val name :T = expr in body end`
+This goes through a transformation via compile into `let [val name :T = expr] in
+body end`
+#### `if`
+`if pred then expr1 else expr2`
+- pred, expr1, expr2 all can be expressions
+#### `case`
+`case expr of body`
+Not a lot of focus has been put into pattern matching
+
+### Type System
+Type checking implemented for all Syntax form excep `case`. Done after
+compilation-1, before compilation-2. No forms of type inference, but does build
+type environments for extensive type checking of variable usage.
+
+### Tests
+Unit tests for `lang`, `type`, `core` namespace.
+
+### Todos
+- Work on `compile` namespace
+- Learn about `Local Type Inference`, attempt to implement it with `core.logic`
