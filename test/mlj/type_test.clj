@@ -50,35 +50,48 @@
 
 ;;; Type checking all forms
 (deftest check-app-test
-  (is (= (check-app '(+ [1 2]) {}) :int))
-  (is (thrown? IllegalArgumentException (check-app '(+ [1 "1"]) {}) :int)))
+  (is (= (check-app '(+ [1 2]) (atom {})) :int))
+  (is (thrown? IllegalArgumentException (check-app '(+ [1 "1"]) (atom {})) :int)))
 
 (deftest check-val-test
   (let [env (atom {})]
-    (is (= (check-val '(val x :int = 1) env) :int))
-    (is (thrown? IllegalArgumentException (check-val '(val y :int = "1") env)))
+    (is (= (check-val '(val x :- :int := 1) env) :int))
+    (is (thrown? IllegalArgumentException (check-val '(val y :- :int := "1") env)))
     (is (= (@env 'x) :int))
     (is (nil? (@env 'y)))))
 
 (deftest check-if-test
-  (is (= (check-if '(if true then 1 else 2) {}) :int))
-  (is (thrown? IllegalArgumentException (check-if '(if true then 1 else "2"))))
-  (is (thrown? IllegalArgumentException (check-if '(if 1 then 1 else 2)))))
+  (is (= (check-if '(if true then 1 else 2) (atom {})) :int))
+  (is (thrown? IllegalArgumentException (check-if '(if true then 1 else "2") (atom {}))))
+  (is (thrown? IllegalArgumentException (check-if '(if 1 then 1 else 2) (atom {})))))
 
 (deftest check-let-test
-  (is (= (check-let '(let [val x :int = 1] in x end) {}) :int))
-  (is (= (check-let '(let [val x :int = 1
-                           val y :int = x] in y end) {}) :int))
-  (is (= (check-let '(let [val x :int = 1
-                           val y :int = 2] in (+ [x y]) end) {}) :int))
-  (is (= (check-let '(let [val x :int = 1
-                           val y :char = \a] in y end) {}) :char))
-  (is (= (check-let '(let [] in 1 end) {}) :int))
+  (is (= (check-let '(let [:val x :- :int := 1] :in x) {}) :int))
+  (is (= (check-let '(let [:val x :- :int := 1
+                           :val y :- :int := x] :in y) {}) :int))
+  (is (= (check-let '(let [:val x :- :int := 1
+                           :val y :- :int := 2] :in (+ [x y])) {}) :int))
+  (is (= (check-let '(let [:val x :- :int := 1
+                           :val y :- :char := \a] :in y) {}) :char))
+  (is (= (check-let '(let [] :in 1) {}) :int))
   (is (thrown? IllegalArgumentException
-               (check-let '(let [val x :int = \a] in x end) {})))
+               (check-let '(let [:val x :- :int := \a] :in x) {})))
+  (is (thrown? IllegalArgumentException 
+               (check-let '(let [:val x :- :int := 1
+                                 :val y :- :char := x] :in x) {})))
+
+  (is (= (check-let '(let [:val x := 1
+                           :val y := x] :in y) {}) :int) "Infered Type")
   (is (thrown? IllegalArgumentException
-               (check-let '(let [val x :int = 1
-                                 val y :char = x] in x end) {}))))
+       (check-let '(let [:val x := 1
+                         :val y :char := x] :in y) {})) "Infered Type with error"))
 
 (deftest check-fn-test
-  (is (= (check-fn '(fn x (:int :int) => 1) {}) '(:int :int))))
+  (is (= (check-fn '(fn x :- (:int :int) :=> 1) {}) '(:int :int)))
+  (is (= (check-fn '(fn [x y] :=> (+ [x y])) {}) '([:int :int] :int)) "App inference")
+  (is (= (check-fn '(fn [x y] :=> (if x then 1 else y)) {}) '([:bool :int] :int)) "If inference"))
+
+(deftest check-fun-test
+  (is (= (check-fun '(fun foo x :- (:int :int) := 1) (atom {})) '(:int :int)))
+  (is (= (check-fun '(fun bar [x y] := (+ [x y])) (atom {})) '([:int :int] :int)) "App inference")
+  (is (= (check-fun '(fun baz [x y] := (if x then 1 else y)) (atom {})) '([:bool :int] :int)) "If inference"))

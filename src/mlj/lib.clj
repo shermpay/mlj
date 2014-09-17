@@ -1,3 +1,6 @@
+;;;; Sherman Pay
+;;;; TODO: Add more functions
+;;;; TODO: Overload operators
 (ns mlj.lib
   "Standard Library"
   (:refer-clojure :exclude [val let fn if])
@@ -5,10 +8,15 @@
             [mlj.lang :as ml])
   (:gen-class))
 
+;;;;;;;;;;;;;;;;;;;;;;;
+;; Primitive Generic ;;
+;;;;;;;;;;;;;;;;;;;;;;;
+(ml/fun id x (:a :a) := x)
 ;;;;;;;;;;;;;;;;;;;;
 ;; Int operations ;;
 ;;;;;;;;;;;;;;;;;;;;
-(ml/fun + [x y] ([:int :int] :int) = (c/+ x y))
-(ml/fun - [x y] ([:int :int] :int) = (c/- x y))
-(ml/fun * [x y] ([:int :int] :int) = (c/* x y))
-(ml/fun / [x y] ([:int :int] :int) = (c// x y))
+(ml/fun + [x y] ([:int :int] :int) := (c/+ x y))
+(ml/fun - [x y] ([:int :int] :int) := (c/- x y))
+(ml/fun * [x y] ([:int :int] :int) := (c/* x y))
+(ml/fun / [x y] ([:int :int] :int) := (c// x y))
+(ml/fun neg x (:int :int) := (c/- x)) 

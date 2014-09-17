@@ -28,12 +28,12 @@
   "Define a ML lambda.
   Example:
   fn x => x"
-  [param => & body]
+  [param & {body :=>}]
   `(c/fn [~param]
-     ~@(if (not= => '=>)
+     ~@(if (nil? body)
          (throw (NoSuchMethodException.
-                 (str "Syntax Error: FN requires =>; Got " =>)))
-         body)))
+                 (str "Syntax Error: FN requires => body;")))
+         (list body))))
 
 (defmacro ^:mlj if
   "ML if.
@@ -52,10 +52,10 @@
 
 (defmacro ^:mlj val
   "ML val keyword. Binds a symbol to a value. t is the type declaration."
-  [sym t = expr]
-  (if (not= = '=)
+  [sym t & {expr :=}]
+  (if (nil? expr)
     (throw (NoSuchMethodException.
-            (str "Syntax Error: VAL expected =; Got " =)))
+            (str "Syntax Error: VAL expected = expr;")))
     `(do
        (def ~sym  ~expr)
        (alter-meta! #'~sym assoc :type '~t)
@@ -63,9 +63,9 @@
 
 (defmacro ^:mlj fun
   "Define a ML named function. Type Signatures should be of form: ([:int * :int] -> :int)."
-  [name param type-sig = expr]
+  [name param type-sig & {expr :=}]
   `(do
-     (ml/val ~name ~type-sig ~= (ml/fn ~param ~'=> ~expr))
+     (ml/val ~name ~type-sig := (ml/fn ~param :=> ~expr))
      (alter-meta! #'~name assoc :arglists '~(conj '() [param]))
      '~name))
 
@@ -91,25 +91,31 @@
 (defn ^:private get-bindings
   "Get the binding components of a binding vector."
   [v]
-  (into [] (keep-indexed #(if (let-pair? [%1 %2]) %2) v)))
+  (vec (filter (complement keyword?) v))
+  ;; (into [] (keep-indexed #(if (let-pair? [%1 %2]) %2) v))
+  )
 
 (defmacro ^:mlj ^:dynamic let
   "ML let keyword. Example: let bindings in expr end"
-  [bindings in expr end]
+  [bindings & {expr :in}]
   (c/let [bindings bindings]
     (cond
-     (not (check-binding-syntax bindings))
-     (throw (NoSuchMethodException.
-             (str "Syntax Error: LET requires bindings of the form val symbol :T = value;" 
-                  "Got " bindings)))
-     (not= in 'in)
+     (comment
+       (not (check-binding-syntax bindings)))
+     (comment
+       (throw (NoSuchMethodException.
+              (str "Syntax Error: LET requires bindings of the form val symbol :T = value;" 
+                   "Got " bindings))))
+     (nil? expr)
      (throw (NoSuchMethodException.
              (str "Syntax Error: LET requires IN keyword after bindings."
                   bindings)))
-     (not= end 'end)
-     (throw (NoSuchMethodException.
-             (str "Syntax Error: LET required END keyword at the close."
-                  bindings)))
+     (comment
+       (nil? end))
+     (comment
+       (throw (NoSuchMethodException.
+              (str "Syntax Error: LET required END keyword at the close."
+                   bindings))))
      :else `(c/let ~(get-bindings bindings)
               ~expr))))
 
@@ -144,4 +150,5 @@
                             (ns-publics *ns*))))
 
 (def syntax '#{then else in end = val})
-
+(defn foo [& {a :a :as p}]
+  (println p))

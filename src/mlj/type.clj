@@ -1,4 +1,10 @@
 ;;;; Sherman Pay
+
+;;;; TODO: Change implementation of Types
+;;;; Types should be implemented as Symbols, they should be optionally declared.
+;;;; :* will be the keyword.
+
+;;;; TODO: Add type inference
 ;;;; TODO: Add Generics
 ;;;; TODO: Catch errors in helper functions
 (ns mlj.type
@@ -23,14 +29,19 @@
                            :string {:type java.lang.String
                                    :type-fn string?}
                            :char {:type java.lang.Character
-                                 :type-fn char?}})
-;;;;;;;;;;;;;;
-;; Generics ;;
-;;;;;;;;;;;;;;
-(defn generic?
+                                  :type-fn char?}
+                           :unit {:type nil
+                                  :type-fn (comp tuple? empty?)}})
+;;;;;;;;;;;;;;;;;;;;
+;; Type Variables ;;
+;;;;;;;;;;;;;;;;;;;;
+(def type-vars (-> (map (comp keyword str char) (range (int \a) (int \z)))
+                   vec
+                   atom))
+(defn type-var?
   [t]
   {:pre [(keyword? t)]}
-  (not (*type-map* t)))
+  (and (not (*type-map* t))))
 
 ;;;;;;;;;;;;;;;;;
 ;; Tuple Types ;;
@@ -69,8 +80,9 @@
 (defn type-of 
   "Gets the type of a value"
   [v env]
-  {:pre [(not (keyword? v))]}
+  {:pre [(not (keyword? v)) (not (list? v))]}
   (cond
+   (nil? v) :unit
    (tuple? v) (tuple-type v env)
    (var? v) (var-type v)
    (symbol? v) (env v)
@@ -82,16 +94,6 @@
   "Check if v is of type t in env"
   [v t env]
   (= (type-of v env) t))
-
-(defn same-type?
-  "Checks if v1 and v2 are the same type in env.
-  Expect heavy usage for Generics."
-  [v1 v2 env]
-  (let [t1 (type-of v1 env)
-        t2 (type-of v2 env)]
-    (if (or (nil? t1) (nil? t2))
-      false
-      (= t1 t2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Function Type signatures ;;
@@ -131,11 +133,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Type checking forms ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Application should hold a type variable map, that maps a type variable to a type
 (defn check-app
   "Type checks a function application. Returns the return type of the function if valid."
   [[f arg] env]
-  (let [arg-types (vec (map #(check-expr % env) arg))
-        [par ret] (fn-type f)]
+  (let [[par ret] (fn-type f)
+        arg-types (if (tuple? arg)
+                    (vec (map-indexed (fn [idx item] (if-let [t (check-expr item env)]
+                                                       t
+                                                       (let [sym (arg idx)
+                                                             infered (par idx)]
+                                                         (swap! env assoc sym infered)
+                                                         infered)))
+                                      arg))
+                    (check-expr arg @env))]
     (if (not= arg-types par)
       (throw (IllegalArgumentException.
               (str "Type Error: " f " args: (" arg "), expecting: " par "\n Got: " arg-types)))
@@ -144,52 +155,69 @@
 (defn check-if
   "Type checks an IF expression. Returns the type of the branches if valid, else throws an exception"
   [[if-sym pred then-sym t-expr else-sym e-expr :as if-expr] env]
-  (cond (not (check-type pred :bool env))
+  (do
+    (if-let [pred-type (type-of pred @env)]
+        (if (not= pred-type :bool)
+          (throw (IllegalArgumentException.
+                  (str "Type Error: test in IF expression not type bool"
+                       "\n\ttest expression: " (type-of pred @env)
+                       "\n\tin expression: " if-expr))))
+        (swap! env assoc pred :bool))
+    (let [t-type (check-expr t-expr env)
+          e-type (check-expr e-expr env)
+          t-type (if (and (nil? t-type) (not (nil? e-type)))
+                   e-type t-type)
+          e-type (if (and (nil? e-type) (not (nil? t-type)))
+                   t-type e-type)]
+      (if (symbol? t-expr) (swap! env assoc t-expr t-type))
+      (if (symbol? e-expr) (swap! env assoc e-expr e-type))
+      (if (= t-type e-type)
+        t-type
         (throw (IllegalArgumentException.
-                (str "Type Error: test in IF expression not type bool"
-                     "\n\ttest expression: " (type-of pred env)
-                     "\n\tin expression: " if-expr)))
-        (not (same-type? e-expr t-expr env))
-        (throw (IllegalArgumentException. "Type Error: IF branches types do not agree"))
-        :else (do
-                (check-expr t-expr env)
-                (check-expr e-expr env))))
+                (str "Type Error: IF branches types do not agree." t-type " <> " e-type)))))))
+(defn- set-type! [sym t env]
+  (do (swap! env assoc sym t)
+      t))
 
 (defn check-val
   "Type checks a VAL declaration"
-  [[val-sym sym t eq-sym v :as val-expr] env]
-  (if (= (check-expr v @env) t)
-    (do
-      (swap! env assoc sym t)
-      t)
-    (throw (IllegalArgumentException.
-            (str "Type Error: VAL binding type mismatch."
-                 "\n\tgot: " (type-of v @env)
-                 "\n\tin: " (apply str (interpose \space val-expr)))))))
+  ([[val-sym sym & [& {tsig :- v :=}] :as val-expr] env]
+     (let [t (check-expr v env)]
+       (if (or (nil? tsig) (= tsig t))
+         (do
+           (swap! env assoc sym t)
+           t)
+         (throw (IllegalArgumentException.
+                 (str "Type Error: VAL binding type mismatch."
+                      "\n\tgot: " (type-of v @env)
+                      "\n\tin: " (apply str (interpose \space val-expr)))))))))
 
 (defn check-fn
   "Type checks a FN expression. Return the fn type if valid"
-  [[fn-sym param [par-type ret-type :as tsig] => body] env]
-  (let [env (merge env (fn-env param par-type))
-        body-type (check-expr body env)]
-    (if (= body-type ret-type) 
-      tsig
+  [[fn-sym param & {[par-type ret-type :as tsig] :-, body :=>}] env]
+  (let [env (atom (merge env (fn-env param par-type)))
+        body-type (check-expr body env)
+        par-type (if (nil? par-type) (check-expr param env) par-type)]
+    (if (or (nil? ret-type) (= body-type ret-type)) 
+      (list par-type body-type)
       (throw (IllegalArgumentException.
               (str "Type Error: FN return type mismatch."
                    "\n\tExpected: " ret-type
                    "\n\tGot: " body-type))))))
+
 (defn check-fun
   "Type checks a FUN declaration. Return the fn type if valid"
-  [[fun-sym name param [par-type ret-type :as tsig] = body] env]
-  (check-val ['val name tsig '= (list 'fn param tsig '=> body)] env))
+  [[fun-sym name param & {[par-type ret-type :as tsig] :-, body :=}] env]
+  (check-val ['val name :- tsig := (list 'fn param :- tsig :=> body)] env))
 
 (defn check-let
   "Type check a LET expression. Returns the type of the body if valid"
-  [[let-sym binding-exprs in-sym body end-sym :as let-expr] env]
+  [[let-sym binding-exprs & {body :in} :as let-expr] env]
   (let [let-env (atom env)]
-      (doseq [binding (partition (inc (core/count-args 'val)) binding-exprs)]
-        (check-val binding let-env))
-    (check-expr body @let-env)))
+    (doseq [binding (keep-indexed #(if (odd? %1) (conj %2 'val))
+                                  (partition-by #(= :val %) binding-exprs))]
+      (check-val binding let-env))
+    (check-expr body let-env)))
 
 (defn check-expr
   "Type checks an expression. 
@@ -202,9 +230,9 @@
                                   val (check-val expr environment)
                                   if (check-if expr env)
                                   let (check-let expr env)
-                                  fn (check-fn expr env)
-                                  fun (check-fn expr environment)
+                                  fn (check-fn expr @env)
+                                  fun (check-fun expr environment)
                                   (throw (IllegalStateException. (str "Found uncheck keyword: " form))))
        (core/builtin? form) (check-app expr env)
        :else ((throw (IllegalStateException. (str "Found uncheck form: " form))))))
-    (type-of expr env)))
+    (type-of expr @env)))
