@@ -84,14 +84,33 @@
                            :val y := x] :in y) {}) :int) "Infered Type")
   (is (thrown? IllegalArgumentException
        (check-let '(let [:val x := 1
-                         :val y :char := x] :in y) {})) "Infered Type with error"))
+                         :val y :char := x] :in y) {})) "Infered Type with error")
+  (is (= (check-let '(let [:val x := 1]
+                       :in
+                       (let [:val y := x]
+                         :in
+                         y)) {})
+         :int) "Nested inference"))
 
 (deftest check-fn-test
   (is (= (check-fn '(fn x :- (:int :int) :=> 1) {}) '(:int :int)))
   (is (= (check-fn '(fn [x y] :=> (+ [x y])) {}) '([:int :int] :int)) "App inference")
-  (is (= (check-fn '(fn [x y] :=> (if x then 1 else y)) {}) '([:bool :int] :int)) "If inference"))
+  (is (= (check-fn '(fn [x y] :=> (if x then 1 else y)) {})
+         '([:bool :int] :int)) "If inference")
+  (is (= (check-fn '(fn x :=> (if (if true then x else true) then 1 else 2)) {})
+         '(:bool :int))))
 
 (deftest check-fun-test
   (is (= (check-fun '(fun foo x :- (:int :int) := 1) (atom {})) '(:int :int)))
   (is (= (check-fun '(fun bar [x y] := (+ [x y])) (atom {})) '([:int :int] :int)) "App inference")
   (is (= (check-fun '(fun baz [x y] := (if x then 1 else y)) (atom {})) '([:bool :int] :int)) "If inference"))
+
+
+
+
+
+
+
+
+
+

@@ -1,10 +1,6 @@
 ;;;; Sherman Pay
 
 ;;;; TODO: Change implementation of Types
-;;;; Types should be implemented as Symbols, they should be optionally declared.
-;;;; :* will be the keyword.
-
-;;;; TODO: Add type inference
 ;;;; TODO: Add Generics
 ;;;; TODO: Catch errors in helper functions
 (ns mlj.type
@@ -156,7 +152,7 @@
   "Type checks an IF expression. Returns the type of the branches if valid, else throws an exception"
   [[if-sym pred then-sym t-expr else-sym e-expr :as if-expr] env]
   (do
-    (if-let [pred-type (type-of pred @env)]
+    (if-let [pred-type (check-expr pred env)]
         (if (not= pred-type :bool)
           (throw (IllegalArgumentException.
                   (str "Type Error: test in IF expression not type bool"
@@ -229,10 +225,11 @@
        (core/mlj-keyword? form) (case form
                                   val (check-val expr environment)
                                   if (check-if expr env)
-                                  let (check-let expr env)
+                                  let (check-let expr @env)
                                   fn (check-fn expr @env)
                                   fun (check-fun expr environment)
                                   (throw (IllegalStateException. (str "Found uncheck keyword: " form))))
        (core/builtin? form) (check-app expr env)
        :else ((throw (IllegalStateException. (str "Found uncheck form: " form))))))
     (type-of expr @env)))
+
