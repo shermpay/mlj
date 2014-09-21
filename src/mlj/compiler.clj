@@ -14,8 +14,8 @@
     decl = val 
     val = <'val'> ws+ id ws* <'='> ws* expr
 
-    expr = lp exp rp | exp ws* tann?
-    exp = const | id | id ws* exp | if | let | fn
+    expr = lp exp rp | exp ws* ann?
+    <exp> = const | id | id ws* exp | if | let | fn
     if = <'if'> ws+ expr ws+ <'then'> ws+ expr ws+ <'else'> ws+ expr ws*
     let = <'let'> ws+ (val ws)* 'in' ws+ expr ws+ 'end' ws*
     fn = <'fn'> ws+ id ws+ <'=>'> ws+ expr ws*
@@ -27,13 +27,14 @@
     string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>
     unit = lp ws* rp
 
-    tuple = lp expr (<','> expr)+ rp
+    tuple = lp expr ws* (<','> ws* expr)+ rp
+    ttuple = lp type ws* (<'*'> ws* type)+ rp
 
-    tann = <':'> ws* tname
-    tname = 'int' | 'bool' | 'char' | 'string' | 'real' | 'unit'
+    ann = <':'> ws* (type | ttuple)
+    type = 'int' | 'bool' | 'char' | 'string' | 'real' | 'unit'
 
-    id = !reserved #'([a-zA-Z\\+\\-\\*/])+' ws* tann?
-    <reserved> = 'true' | 'false' | 'val' | 'if' | 'let' | 'fn' 
+    id = !reserved #'([a-zA-Z\\+\\-\\*/])+' ws* ann?
+    <reserved> = bool | 'val' | 'if' | 'let' | 'fn' | type
     <ws> = <#'\\s+'>
     <lp> = <'('>
     <rp> = <')'>"))
@@ -43,6 +44,19 @@
       io/resource
       slurp
       mlj-parser))
+
+(defn tag [v]
+  (first v))
+
+(defn item [v]
+  (rest v))
+
+(defn testing []
+  (->> "comp.sml"
+      parse-res
+      (take 5)
+     
+      pretty/pprint))
 
 ;;; Type Signature parsing
 (defn parse-fn-typesig
