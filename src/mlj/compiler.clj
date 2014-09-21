@@ -1,8 +1,48 @@
 (ns mlj.compiler
   "Compiles a set of MLJ forms into Clojure"
   (:refer-clojure :exclude [compile])
-  (:require [mlj.core :as core])
+  (:require [clojure.java.io :as io]
+            [clojure.pprint :as pretty]
+            [mlj.core :as core]
+            [instaparse.core :as insta])
   (:gen-class))
+
+(def mlj-parser
+  (insta/parser
+   "<program> = decl <';'*> ws* ((<';'> | ws) decl)*
+
+    decl = val 
+    val = <'val'> ws+ id ws* <'='> ws* expr
+
+    expr = lp exp rp | exp ws* tann?
+    exp = const | id | id ws* exp | if | let | fn
+    if = <'if'> ws+ expr ws+ <'then'> ws+ expr ws+ <'else'> ws+ expr ws*
+    let = <'let'> ws+ (val ws)* 'in' ws+ expr ws+ 'end' ws*
+    fn = <'fn'> ws+ id ws+ <'=>'> ws+ expr ws*
+
+    <const> = number | bool | char | string | tuple
+    number = #'[0-9]+'
+    bool = 'true' | 'false'
+    char = '#' '\\\"' #'.' '\\\"'
+    string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>
+    unit = lp ws* rp
+
+    tuple = lp expr (<','> expr)+ rp
+
+    tann = <':'> ws* tname
+    tname = 'int' | 'bool' | 'char' | 'string' | 'real' | 'unit'
+
+    id = !reserved #'([a-zA-Z\\+\\-\\*/])+' ws* tann?
+    <reserved> = 'true' | 'false' | 'val' | 'if' | 'let' | 'fn' 
+    <ws> = <#'\\s+'>
+    <lp> = <'('>
+    <rp> = <')'>"))
+
+(defn parse-res [filename & [pprint]]
+  (-> filename
+      io/resource
+      slurp
+      mlj-parser))
 
 ;;; Type Signature parsing
 (defn parse-fn-typesig
@@ -44,7 +84,7 @@
   (map #(nth % 2) (partition 5 b))) 
        
 ;;; Overall parsing
-(defmacro parse
+(defmacro compile
   "Takes in the body a valid ML expression, parse it into a form
   recognizable by Clojure. Which is a Concrete Syntax Tree of Clojure
   macros defined in mlj.lang 
@@ -83,12 +123,15 @@
                  (nthrest tl n))))
       `(concat '() '~result))))
 
-(parse if true then 1 else 2)
-(parse val x [:int * :int] = [1 2])
-(parse fun foo [x, y] ([:int * :int] -> :int) = 1)
-(parse let
-       val x :int = 1
-       val y [:int * :int] = [1, 2]
-       in
-       (+ x y)
-       end)
+
+(comment
+  (compile if true then 1 else 2)
+  (compile val x [:int * :int] = [1 2])
+  (compile fun foo [x, y] ([:int * :int] -> :int) = 1)
+  (compile let
+           val x :int = 1
+           val y [:int * :int] = [1, 2]
+           in
+           (+ x y)
+           end))
+

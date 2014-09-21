@@ -3,6 +3,8 @@
 
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.match "0.2.1"]
-                 [org.clojure/core.logic "0.8.8"]]
+                 [org.clojure/core.logic "0.8.8"]
+                 [instaparse "1.3.4"]
+                 [rhizome "0.2.1"]]
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

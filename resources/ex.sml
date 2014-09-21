@@ -1,4 +1,4 @@
-val foo = fn (x :int) => x
+val foo = fn (x : int) => x
 
 val bar = fn (x, y) => x + y
 
