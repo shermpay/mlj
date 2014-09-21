@@ -9,7 +9,7 @@
 
 (def mlj-parser
   (insta/parser
-   "<program> = decl <';'*> ws* ((<';'> | ws) decl)*
+   "<program> = decl <';'>* ws* |  decl ((<';'>+ ws* | ws*) decl)*
 
     decl = val 
     val = <'val'> ws+ id ws* <'='> ws* expr
