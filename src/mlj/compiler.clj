@@ -2,15 +2,17 @@
   "Compiles a set of MLJ forms into Clojure"
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.io :as io]
+            [clojure.walk :as walk]
             [clojure.pprint :as pretty]
             [mlj.core :as core]
             [instaparse.core :as insta])
   (:gen-class))
 
-(def mlj-parser
+(def mlj-parse
   (insta/parser
-   "<program> = decl <';'>* ws* |  decl ((<';'>+ ws* | ws*) decl)*
-
+   "<program> = toplvl <';'>* ws* |  decl ((<';'>+ ws* | ws*) decl)* 
+                | toplvl (<';'>+ ws* expr)*
+    <toplvl> = decl | expr
     decl = val 
     val = <'val'> ws+ id ws* <'='> ws* expr
 
@@ -45,11 +47,17 @@
       slurp
       mlj-parser))
 
-(defn tag [v]
-  (first v))
+(defn tag-of [coll]
+  (first coll))
 
-(defn item [v]
-  (rest v))
+(defn item-of [coll]
+  (rest coll))
+
+(defmulti compile "Takes a vector tree and compiles into a Clojure form" tag-of)
+(defmethod compile :id [tree]
+  (symbol (item-of tree)))
+(defmethod compile :val [tree]
+  '())
 
 (defn testing []
   (->> "comp.sml"
