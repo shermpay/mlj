@@ -8,28 +8,29 @@
             [instaparse.core :as insta])
   (:gen-class))
 
-(def mlj-parse
+(def parse
   (insta/parser
-   "<program> = toplvl <';'>* ws* |  decl ((<';'>+ ws* | ws*) decl)* 
-                | toplvl (<';'>+ ws* expr)*
+   "<program> = toplvl <';'>* ws* |  decl (ws* decl)* 
+                | toplvl (ws* <';'>* ws* expr)*
     <toplvl> = decl | expr
     decl = val 
     val = <'val'> ws+ id ws* <'='> ws* expr
 
-    expr = lp exp rp | exp ws* ann?
-    <exp> = const | id | id ws* exp | if | let | fn
+    expr =  exp ws* ann? | lp exp rp 
+    <exp> = id | const | if | let | fn | id (ws* exp ws*)* 
     if = <'if'> ws+ expr ws+ <'then'> ws+ expr ws+ <'else'> ws+ expr ws*
-    let = <'let'> ws+ (val ws)* 'in' ws+ expr ws+ 'end' ws*
+    let = <'let'> ws+ (val ws)* <'in'> in <'end'> ws*
+    in = ws+ expr ws+
     fn = <'fn'> ws+ id ws+ <'=>'> ws+ expr ws*
 
-    <const> = number | bool | char | string | tuple
+    <const> = number | bool | char | string | unit | tuple
     number = #'[0-9]+'
     bool = 'true' | 'false'
-    char = '#' '\\\"' #'.' '\\\"'
+    char = <'#'> <'\\\"'> #'.' <'\\\"'>
     string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>
     unit = lp ws* rp
 
-    tuple = lp expr ws* (<','> ws* expr)+ rp
+    tuple = lp exp ws* (<','> ws* exp)+ rp
     ttuple = lp type ws* (<'*'> ws* type)+ rp
 
     ann = <':'> ws* (type | ttuple)
@@ -45,7 +46,7 @@
   (-> filename
       io/resource
       slurp
-      mlj-parser))
+      parse))
 
 (defn tag-of [coll]
   (first coll))
@@ -54,10 +55,65 @@
   (rest coll))
 
 (defmulti compile "Takes a vector tree and compiles into a Clojure form" tag-of)
-(defmethod compile :id [tree]
-  (symbol (item-of tree)))
-(defmethod compile :val [tree]
-  '())
+
+(defmethod compile :id [[_ item]]
+  (symbol item))
+
+(defmethod compile :number [[_ item]]
+  (Integer/parseInt item))
+
+(defmethod compile :string [[_ item]]
+  item)
+
+(defmethod compile :char [[_ item]]
+  {:pre (= 1 (count item))}
+  (.charAt item 0))
+
+(defmethod compile :bool [[_ item]]
+  (Boolean/parseBoolean item))
+
+(defmethod compile :unit [_]
+  [])
+
+(defmethod compile :tuple [[_ & items]]
+  (vec (map compile items)))
+
+(defmethod compile :if [[_ & [pred then else]]]
+  (list 'if
+        (compile pred)
+        (compile then)
+        (compile else)))
+
+(defmethod compile :let [[_ & exps]]
+  (let [[bindings [[_ body]]] (partition-by #(= (tag-of %) :in) exps)]
+    (list
+     'let (->> bindings
+               (map (fn [[_ id expr]]
+                      (vector (compile id) (compile expr))))
+               flatten
+               vec)
+     (compile body))))
+
+(defmethod compile :fn [[_ params body]]
+  (list 'fn
+        (vector (compile params))
+        (compile body)))
+
+(defmethod compile :expr [[_ & items]]
+  (if (= 1 (count items))
+    (compile (first items))
+    (map compile items)))
+
+(defmethod compile :val [[_ & [sym exp]]]
+  (list 'def
+        (compile sym)
+        (compile exp)))
+
+(defmethod compile :decl [[_ item]]
+  (compile item))
+
+(defmethod compile :default [tree]
+  (throw (ex-info "Unable to compile, malformed syntax" (into {} tree))))
 
 (defn testing []
   (->> "comp.sml"
@@ -106,44 +162,45 @@
   (map #(nth % 2) (partition 5 b))) 
        
 ;;; Overall parsing
-(defmacro compile
-  "Takes in the body a valid ML expression, parse it into a form
+(comment
+  (defmacro compile
+   "Takes in the body a valid ML expression, parse it into a form
   recognizable by Clojure. Which is a Concrete Syntax Tree of Clojure
   macros defined in mlj.lang 
   Examples:
   (parse if pred then expr else expr) => (#'ml/if pred then expr else expr)"
-  [& body]
-  (loop [result []
-         [hd & tl] body]
-    (if (or (core/mlj-keyword? hd)
-            (core/builtin? hd))
-      (let [n (core/count-args hd)]
-        (case hd
-          val (recur (conj result
+   [& body]
+   (loop [result []
+          [hd & tl] body]
+     (if (or (core/mlj-keyword? hd)
+             (core/builtin? hd))
+       (let [n (core/count-args hd)]
+         (case hd
+           val (recur (conj result
                             (conj (let [[sym tsig & a] `~(take n tl)]
                                     (concat (list sym (parse-typesig tsig)) a))
                                   (core/get-var hd)))
                       (nthrest tl n))
 
-          fun (recur (conj result
-                           (conj (let [[name param tsig & more] `~(take n tl)]
-                                   (concat (list name param (parse-typesig tsig)) more))
-                                 (core/get-var hd)))
-                     (nthrest tl n))
-          ;; Let case: take a let binding of the form `let val x [:int * :int] = [1, 2] in x end`
-          ;; and transform it to `(let [x [:int :int] = [1 2]] in x end)`
-          let (recur (conj result
-                           (conj (let [expr `~(take-while #(not= 'end %) tl)
-                                       [bindings body] (split-with #(not= % 'in) expr)]
-                                   (concat (conj '() (vec (parse-bindings bindings))) body '(end)))
-                                 (core/get-var hd)))
-                     (nthrest tl n))
+           fun (recur (conj result
+                            (conj (let [[name param tsig & more] `~(take n tl)]
+                                    (concat (list name param (parse-typesig tsig)) more))
+                                  (core/get-var hd)))
+                      (nthrest tl n))
+           ;; Let case: take a let binding of the form `let val x [:int * :int] = [1, 2] in x end`
+           ;; and transform it to `(let [x [:int :int] = [1 2]] in x end)`
+           let (recur (conj result
+                            (conj (let [expr `~(take-while #(not= 'end %) tl)
+                                        [bindings body] (split-with #(not= % 'in) expr)]
+                                    (concat (conj '() (vec (parse-bindings bindings))) body '(end)))
+                                  (core/get-var hd)))
+                      (nthrest tl n))
 
-          (recur (conj result
-                       (conj `~(take n tl)
-                             (core/get-var hd)))
-                 (nthrest tl n))))
-      `(concat '() '~result))))
+           (recur (conj result
+                        (conj `~(take n tl)
+                              (core/get-var hd)))
+                  (nthrest tl n))))
+       `(concat '() '~result)))))
 
 
 (comment

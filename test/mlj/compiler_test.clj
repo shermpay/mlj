@@ -3,7 +3,7 @@
             [mlj.compiler :as comp]
             [mlj.lang :as ml]))
 
-(deftest mlj-parser-test
+(deftest parser-test
   (is (= (comp/parse-res "comp.sml")
          '([:decl [:val [:id "x"] [:expr [:number "1"]]]]
              [:decl [:val [:id "foo"] [:expr [:fn [:id "x"] [:expr [:id "x"]]]]]]
