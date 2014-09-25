@@ -2,59 +2,12 @@
   "Compiles a set of MLJ forms into Clojure"
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.io :as io]
-            [clojure.walk :as walk]
-            [clojure.pprint :as pretty]
+            [instaparse.core :as insta]
             [mlj.core :as core]
-            [instaparse.core :as insta])
+            [mlj.ast :as ast])
   (:gen-class))
 
-(def parse
-  (insta/parser
-   "<program> = toplvl <';'>* ws* |  decl (ws* decl)* 
-                | toplvl (ws* <';'>* ws* expr)*
-    <toplvl> = decl | expr
-    decl = val 
-    val = <'val'> ws+ id ws* <'='> ws* expr
-
-    expr =  exp ws* ann? | lp exp rp 
-    <exp> = id | const | if | let | fn | id (ws* exp ws*)* 
-    if = <'if'> ws+ expr ws+ <'then'> ws+ expr ws+ <'else'> ws+ expr ws*
-    let = <'let'> ws+ (val ws)* <'in'> in <'end'> ws*
-    in = ws+ expr ws+
-    fn = <'fn'> ws+ id ws+ <'=>'> ws+ expr ws*
-
-    <const> = number | bool | char | string | unit | tuple
-    number = #'[0-9]+'
-    bool = 'true' | 'false'
-    char = <'#'> <'\\\"'> #'.' <'\\\"'>
-    string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>
-    unit = lp ws* rp
-
-    tuple = lp exp ws* (<','> ws* exp)+ rp
-    ttuple = lp type ws* (<'*'> ws* type)+ rp
-
-    ann = <':'> ws* (type | ttuple)
-    type = 'int' | 'bool' | 'char' | 'string' | 'real' | 'unit'
-
-    id = !reserved #'([a-zA-Z\\+\\-\\*/])+' ws* ann?
-    <reserved> = bool | 'val' | 'if' | 'let' | 'fn' | type
-    <ws> = <#'\\s+'>
-    <lp> = <'('>
-    <rp> = <')'>"))
-
-(defn parse-res [filename & [pprint]]
-  (-> filename
-      io/resource
-      slurp
-      parse))
-
-(defn tag-of [coll]
-  (first coll))
-
-(defn item-of [coll]
-  (rest coll))
-
-(defmulti compile "Takes a vector tree and compiles into a Clojure form" tag-of)
+(defmulti compile "Takes a vector tree and compiles into a Clojure form" ast/tag-of)
 
 (defmethod compile :id [[_ item]]
   (symbol item))
@@ -201,16 +154,3 @@
                               (core/get-var hd)))
                   (nthrest tl n))))
        `(concat '() '~result)))))
-
-
-(comment
-  (compile if true then 1 else 2)
-  (compile val x [:int * :int] = [1 2])
-  (compile fun foo [x, y] ([:int * :int] -> :int) = 1)
-  (compile let
-           val x :int = 1
-           val y [:int * :int] = [1, 2]
-           in
-           (+ x y)
-           end))
-

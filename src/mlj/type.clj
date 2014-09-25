@@ -9,10 +9,12 @@
   Also provides builtin mlj types."
   (:require [mlj.lang :as ml]
             [mlj.core :as core]
+            [mlj.parser :as parser]
+            [mlj.ast :as ast]
             [mlj.lib :as lib])
   (:gen-class))
 
-(declare type-of check-expr)
+(declare type-of check-expr tuple?)
 ;;;;;;;;;;;;;;;;;
 ;; Definitions ;;
 ;;;;;;;;;;;;;;;;;
@@ -233,3 +235,11 @@
        :else ((throw (IllegalStateException. (str "Found uncheck form: " form))))))
     (type-of expr @env)))
 
+
+(defmulti parse-ann "Takes a vector tree and parses the type ann" ast/tag-of)
+
+(defmethod parse-ann :type [[_ s]]
+  (keyword s))
+
+(defmethod parse-ann :ttuple [[_ & ts]]
+  (vec (map parse-ann ts)))
