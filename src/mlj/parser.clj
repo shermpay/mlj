@@ -22,8 +22,8 @@
     in = ws+ expr ws+
     fn = <'fn'> ws+ id ws+ <'=>'> ws+ expr ws*
 
-    <const> = number | bool | char | string | unit | tuple
-    number = #'[0-9]+'
+    <const> = int | bool | char | string | unit | tuple
+    int = #'[0-9]+'
     bool = 'true' | 'false'
     char = <'#'> <'\\\"'> #'.' <'\\\"'>
     string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>

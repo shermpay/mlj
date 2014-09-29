@@ -12,7 +12,7 @@
             [mlj.parser :as parser]
             [mlj.ast :as ast]
             [mlj.lib :as lib])
-  (:gen-class))
+  )
 
 (declare type-of check-expr tuple?)
 ;;;;;;;;;;;;;;;;;
@@ -236,10 +236,55 @@
     (type-of expr @env)))
 
 
-(defmulti parse-ann "Takes a vector tree and parses the type ann" ast/tag-of)
+(defmulti parse-type "Takes a vector tree and parses the type" ast/tag-of)
 
-(defmethod parse-ann :type [[_ s]]
+(defmethod parse-type :type [[_ s]]
   (keyword s))
 
-(defmethod parse-ann :ttuple [[_ & ts]]
-  (vec (map parse-ann ts)))
+(defmethod parse-type :ttuple [[_ & ts]]
+  (vec (map parse-type ts)))
+
+(defn parse-ann [[_ ann]]
+  (parse-type ann))
+
+(defn match-ann 
+  "Takes a an object o and an annotation ann and check if o is correctly annotated"
+  [o ann]
+  (if (or (nil? ann) (= (ast/tag-of o) (parse-ann ann)))
+    true
+    (throw (ex-info "Type mismatch." {:got o
+                                      :expect ann}))))
+
+(defmulti check "Takes a vector tree and checks the type" (fn [x _] (ast/tag-of x)))
+
+(defmethod check :expr [[_ exp & [ann]] env]
+  (if (check exp env)
+    (match-ann exp ann)
+    (throw (ex-info "Type mismatch." {:expr exp
+                                      :ann ann}))))
+
+(defmethod check :int [[_ val] env]
+  (try
+    (Integer/parseInt val)
+    (catch NumberFormatException e
+      false)))
+
+(defmethod check :char [& _]
+  true)
+
+(defmethod check :string [& _]
+  true)
+
+(defmethod check :bool [& _]
+  true)
+
+(defmethod check :id [[_ sym & [ann]] env]
+  (if (nil? ann)
+    true
+    (match-ann (env sym) ann)))
+
+(defmethod check :decl [[_ & [more]]]
+  (check more))
+
+(defmethod check :val [[_ [__ id & [ann]] expr] env]
+  (println id " " ann))

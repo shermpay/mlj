@@ -12,7 +12,7 @@
 (defmethod compile :id [[_ item]]
   (symbol item))
 
-(defmethod compile :number [[_ item]]
+(defmethod compile :int [[_ item]]
   (Integer/parseInt item))
 
 (defmethod compile :string [[_ item]]
