@@ -1,9 +1,8 @@
 (ns mlj.parser
   "Builds a parse tree."
   (:require [clojure.java.io :as io]
-            [clojure.walk :as walk]
-            [clojure.pprint :as pretty]
             [mlj.core :as core]
+            [mlj.compiler :as mljc]
             [instaparse.core :as insta])
   (:gen-class))
 

@@ -11,8 +11,7 @@
             [mlj.core :as core]
             [mlj.parser :as parser]
             [mlj.ast :as ast]
-            [mlj.lib :as lib])
-  )
+            [mlj.lib :as lib]))
 
 (declare type-of check-expr tuple?)
 ;;;;;;;;;;;;;;;;;

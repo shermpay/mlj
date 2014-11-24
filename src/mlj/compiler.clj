@@ -2,7 +2,6 @@
   "Compiles a set of MLJ forms into Clojure"
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.io :as io]
-            [instaparse.core :as insta]
             [mlj.core :as core]
             [mlj.ast :as ast])
   (:gen-class))
@@ -38,7 +37,7 @@
         (compile else)))
 
 (defmethod compile :let [[_ & exps]]
-  (let [[bindings [[_ body]]] (partition-by #(= (tag-of %) :in) exps)]
+  (let [[bindings [[_ body]]] (partition-by #(= (ast/tag-of %) :in) exps)]
     (list
      'let (->> bindings
                (map (fn [[_ id expr]]
@@ -68,12 +67,12 @@
 (defmethod compile :default [tree]
   (throw (ex-info "Unable to compile, malformed syntax" (into {} tree))))
 
-(defn testing []
-  (->> "comp.sml"
-      parse-res
-      (take 5)
+;; (defn testing []
+;;   (->> "comp.sml"
+;;       parse-res
+;;       (take 5)
      
-      pretty/pprint))
+;;       pretty/pprint))
 
 ;;; Type Signature parsing
 (defn parse-fn-typesig
