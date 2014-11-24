@@ -6,7 +6,10 @@
             [mlj.ast :as ast])
   (:gen-class))
 
-(defmulti compile "Takes a vector tree and compiles into a Clojure form" ast/tag-of)
+(defmulti compile
+  "Takes a vector tree and compiles into a Clojure form.
+  Compilation is dispatched on the nodes tag."
+  ast/tag-of)
 
 (defmethod compile :id [[_ item]]
   (symbol item))
@@ -66,6 +69,13 @@
 
 (defmethod compile :default [tree]
   (throw (ex-info "Unable to compile, malformed syntax" (into {} tree))))
+
+(defn compile-prog
+  "Takes in a list of vectors representing a MLJ AST and compiles it into Clojure"
+  [ast]
+  {:pre [(seq? ast)]}
+  (map compile ast))
+
 
 ;; (defn testing []
 ;;   (->> "comp.sml"

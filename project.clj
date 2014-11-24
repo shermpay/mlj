@@ -6,5 +6,6 @@
                  [org.clojure/core.logic "0.8.8"]
                  [instaparse "1.3.4"]
                  [rhizome "0.2.1"]]
+  :main mlj.main
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
