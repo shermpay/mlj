@@ -15,8 +15,8 @@
 ;;;;;;;;;;;;;;;;;;;;
 ;; Int operations ;;
 ;;;;;;;;;;;;;;;;;;;;
-(ml/fun + [x y] ([:int :int] :int) := (c/+ x y))
-(ml/fun - [x y] ([:int :int] :int) := (c/- x y))
-(ml/fun * [x y] ([:int :int] :int) := (c/* x y))
-(ml/fun / [x y] ([:int :int] :int) := (c// x y))
+(ml/fun op+ [x y] ([:int :int] :int) := (c/+ x y))
+(ml/fun op- [x y] ([:int :int] :int) := (c/- x y))
+(ml/fun op* [x y] ([:int :int] :int) := (c/* x y))
+(ml/fun div [x y] ([:int :int] :int) := (c// x y))
 (ml/fun neg x (:int :int) := (c/- x)) 

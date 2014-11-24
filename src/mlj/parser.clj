@@ -6,7 +6,7 @@
             [instaparse.core :as insta])
   (:gen-class))
 
-(def parse
+(def mlj-parser
   (insta/parser
    "<program> = toplvl <';'>* ws* |  decl (ws* decl)* 
                 | toplvl (ws* <';'>* ws* expr)*
@@ -39,6 +39,14 @@
     <ws> = <#'\\s+'>
     <lp> = <'('>
     <rp> = <')'>"))
+
+(defn parse [string]
+  (let [result (mlj-parser string)]
+    (if (insta/failure? result)
+      (do
+        (print result)
+        (System/exit 1))
+      result)))
 
 (defn parse-res [filename & [pprint]]
   (-> filename
