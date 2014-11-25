@@ -5,7 +5,7 @@
 
 (defn intro []
   (println "MLJ interpreter")
-  (println "Type exit to quit"))
+  (println "Type exit to quit."))
 
 (def ^:dynamic *prompt* "- ")
 (def ^:dynamic *output* "=")
@@ -25,6 +25,7 @@
 
 (defn main []
   (intro)
+  (refer 'mlj.lib)
   (loop [input (prompt-read)]
     (if (or (= input "exit") (nil? input))
       (println "Exiting MLJ.")

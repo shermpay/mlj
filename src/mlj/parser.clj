@@ -28,7 +28,7 @@
     string = <'\\\"'> #'(\\\\.|[^\"])*' <'\\\"'>
     unit = lp ws* rp
 
-    tuple = lp exp ws* (<','> ws* exp)+ rp
+    tuple = lp expr ws* (<','> ws* expr)+ rp
     ttuple = lp type ws* (<'*'> ws* type)+ rp
 
     ann = <':'> ws* (type | ttuple)

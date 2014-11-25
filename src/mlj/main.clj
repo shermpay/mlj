@@ -20,7 +20,7 @@
     (println "  " (key->flag k) "\t" v)))
 
 (defn compile-str
-  "Compile a string"
+  "Compile a string. Throws ex-info if syntax error"
   [string]
   (let [parse-res (parser/parse string)]
     (if (parser/parse-error? parse-res)
@@ -49,6 +49,8 @@
         prefix (subs basename 0 (.indexOf basename "."))
         module (symbol prefix)]
     (in-ns module)
+    (clojure.core/refer-clojure)
+    (refer 'mlj.lib)
     (doseq [expr (try
                    (compile-str (slurp path))
                    (catch clojure.lang.ExceptionInfo e
