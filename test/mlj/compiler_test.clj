@@ -3,37 +3,7 @@
             [mlj.compiler :as comp]
             [mlj.lang :as ml]))
 
-(deftest parser-test
-  (is (= (comp/parse-res "comp.sml")
-         '([:decl [:val [:id "x"] [:expr [:number "1"]]]]
-             [:decl [:val [:id "foo"] [:expr [:fn [:id "x"] [:expr [:id "x"]]]]]]
-               [:decl [:val [:id "y"] [:expr [:id "foo"] [:string "a"]]]]
-                 [:decl [:val [:id "z"] [:expr [:id "foo"] [:char "#" "\"" "a" "\""]]]]
-                   [:decl
-                    [:val
-                     [:id "a"]
-                     [:expr
-                      [:if
-                       [:expr [:bool "true"]]
-                       [:expr [:number "1"]]
-                       [:expr [:number "2"]]]]]]
-                     [:decl
-                      [:val
-                       [:id "b"]
-                       [:expr
-                        [:if
-                         [:expr [:bool "true"]]
-                         [:expr
-                          [:if
-                           [:expr [:bool "true"]]
-                           [:expr [:number "1"]]
-                           [:expr [:number "2"]]]]
-                         [:expr [:number "3"]]]]]]
-                       [:decl [:val [:id "t"] [:expr [:bool "true"]]]]
-                         [:decl [:val [:id "f"] [:expr [:bool "false"]]]]
-                           [:decl
-                            [:val [:id "l"] [:expr [:let "in" [:expr [:number "1"]] "end"]]]]
-                             [:decl [:val [:id "tt" [:ann [:type "bool"]]] [:expr [:bool "true"]]]]))))
+
 
 ;; (deftest typesig-test
 ;;   (testing "typesig parsing"
