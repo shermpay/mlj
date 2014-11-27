@@ -89,7 +89,7 @@
     (if (= (count pats) 1)
       (list 'defn
             (compile name)
-            (vectorize (compile pats))
+            (vectorize (compile (first pats)))
             (compile body))
       (list 'defn
             (compile name)
