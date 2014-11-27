@@ -49,7 +49,10 @@
   (testing "fun decl compilation"
     (is (= (compiler/compile
             [:decl [:fun [:id "foo"] [:pat [:id "x"]] [:expr [:int "1"]]]])
-           '(defn foo [x] 1)) "basic")))
+           '(defn foo [x] 1)) "basic")
+    (is (= (compiler/compile [:fun [:id "foo"] [:pat [:id "x"]] [:pat [:id "y"]]
+                              [:expr [:id "x"]]])
+           '(defn foo [x] (fn [y] x))))))
 
 ;; (deftest typesig-test
 ;;   (testing "typesig parsing"

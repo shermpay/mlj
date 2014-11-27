@@ -78,21 +78,23 @@
 
 (deftest if-test
   (testing "if expression"
-    (is (= (parser/parse "if true then 1 else false"))
-        '([:expr [:if [:expr [:bool "true"]]
+    (is (= (parser/parse "if true then 1 else 2")
+           '([:expr [:if [:expr [:bool "true"]]
                   [:expr [:int "1"]]
-                  [:expr [:int "2"]]]])  "simple if")
-    (is (= (parser/parse "if if true then true else false then 1 else 2"))
-        '([:expr [:if [:expr
+                  [:expr [:int "2"]]]])) "simple if")
+    (is (= (parser/parse "if if true then true else false then 1 else 2")
+           '([:expr [:if [:expr
                        [:if [:expr [:bool "true"]]
                         [:expr [:bool "true"]]
                         [:expr [:bool "false"]]]]
                   [:expr [:int "1"]]
-                  [:expr [:int "2"]]]])
-        "if: nested predicate")))
+                  [:expr [:int "2"]]]])) "if: nested predicate")))
 
 (deftest let-test
   (testing "let expression"
-    (is (= (parser/parse "let val x = 1 in x end"))
-        '([:expr [:let [:val [:pat [:id "x"]] [:expr [:int "1"]]]
-                  [:in [:expr [:id "x"]]]]])  "simple let")))
+    (is (= (parser/parse "let val x = 1 in x end")) "simple let")))
+
+(deftest fn-test
+  (testing "fn expression"
+    (is (= (parser/parse "fn x => x")
+           '([:expr [:fn [:pat [:id "x"]] [:expr [:id "x"]]]]))) "basic"))
