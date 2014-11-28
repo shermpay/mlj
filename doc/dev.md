@@ -29,24 +29,29 @@ Symbols should be assigned types of some form
 Multiple components comprising of *2* major phases.
 
 Phases can be viewed as following:
-mlj forms --(mlj.compiler)--> clojure mlj.lang macros --(type-checker)--(mlj.lang)--> clojure.core forms
+~~mlj forms --(mlj.compiler)--> clojure mlj.lang macros --(type-checker)--(mlj.lang)--> clojure.core forms~~
+MLJ source --(mlj.parser)--> parse tree --(mlj.type)--> ast/parse tree --(mlj.compiler)--> clo
+
+#### Parser
+Currently built with *instaparse* which builds a parse tree that is a Clojure Vector.
 
 #### Clojure Compilation
-A very lightweight compiler, current idea is to parenthesize
-expressions and transform Expressions into S-Expressions recognized by Clojure.  
+Take the parse tree generated via the **Parse** and compile into Clojure forms.
+~~A very lightweight compiler, current idea is to parenthesize~~
+~~expressions and transform Expressions into S-Expressions recognized by Clojure.  ~~
 > (Building String representation of ASTs)
 
-Another way is to create a huge macro called sml and wrap everything into it.
+~~Another way is to create a huge macro called sml and wrap everything into it.
 And to **compile** the program is to just wrap everything in it.
 This approach is challenging in ways, but the benefits seem huge. Because within
-the macro, I would be able to do complex transformations, type checking etc.
+the macro, I would be able to do complex transformations, type checking etc.~~
 
-Example: ```sml if true then 1 else 2
+~~Example: ```sml if true then 1 else 2
 ```  
 Can be translated to
 ```clojure
 (if true 1 2)
-```
+```~~
 
 Translate () to []? Tuples as Vectors
 > This might actually be feasible!
@@ -63,21 +68,24 @@ This phase consists of 2 components:
 *Type System* should be completely **static**, **Hindley Milner**.
 > Not sure if achievable, but this mimics SML the most.
 
-The *Type System* is part of the second macro transformation phase to achieve staticness.
+~~The *Type System* is part of the second macro transformation phase to achieve staticness.
 Two possible ideas to type checking.
 * ML functions as Clojure macros which include a type checker.
 * A macro that inspects the namespace, and type checks every form.
 > Both approach seem fairly complex, the second one seems more extensible and feasible.
-> Currently using the second approach
+> Currently using the second approach~~
 
 The *Type Checker* should be part of the compiler, so the compiler comprises of the following:
 * Parser
 * Type checker
+* Clojure Compiler
 
 *Type System* will be implemented as such:
-1. It will obtain type information of declared dependencies via the *meta-data* `:type` tag of
-the Clojure `var`.
-2. Build up a `type-map` of {`var` => type}.
+1. After parsing, using the *:ann* nodes, build a `type-map` of {symbol => type}.
+~~1. It will obtain type information of declared dependencies via the *meta-data* `:type` tag of
+the Clojure `var`.~~
+~~2. Build up a `type-map` of {`var` => type}.~~
+(Above is not ideal because *meta-data* is a runtime concept.
 3. Iterate through the compiled expressions/declaration while doing the following:
 	- Type checks each form
 	- Adds to the `type-map` whenever it encounters a declaration
@@ -101,17 +109,22 @@ Type checking expr to match type T, then erase the types.
 #### `fn`
 `fn param :T => body`
 - param is a single parameter or a tuple of parameters
-- :T is a Clojure keyword representing an MLJ type.
+~~- :T is a Clojure keyword representing an MLJ type.~~
+- :T is optional, type annotation.
 - body is a expression
 #### `fun`
 `fun name param :T = body`  
-- param is a single parameter or a tuple of parameters (No sugared currying
-support yet
-- :T is a Clojure keyword representing an MLJ type.
+- param is a single parameter or a tuple of parameters ~~(No sugared currying
+support yet~~ Sugared currying is now supported.
+~~- :T is a Clojure keyword representing an MLJ type.~~
+- :T is optional, type annotation.
 - body is an expression
 #### `val`
-`val name :T = expr`  
-- :T is a Clojure keyword representing an MLJ type.
+~~`val name :T = expr`  ~~
+~~`val pat :T = expr`  ~~
+- pat is a valid pattern. Allowing multiple bindings.
+~~- :T is a Clojure keyword representing an MLJ type.~~
+- :T is optional, type annotation.
 - expr is an expression
 #### `let`
 `let val name :T = expr in body end`
