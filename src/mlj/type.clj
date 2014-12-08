@@ -41,10 +41,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Type checking helpers ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmulti type-of "Takes a ast node and returns its type" (fn [node & _] (ast/tag-of node)))
+(defmulti type-of "Takes a ast node and returns its type"
+  (fn [node & _] (ast/tag-of node)))
 
 (defmethod type-of :expr [[_ expr] env]
-  (type-of expr env))
+  (let [t (type-of expr env)]
+    (if (and
+         (vector? t)
+         (= (ast/tag-of t) :fn))
+      (last t)                          ; Function application
+      t)))
 
 (defmethod type-of :int [_ env]
   :int)

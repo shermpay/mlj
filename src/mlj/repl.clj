@@ -37,12 +37,15 @@
     (println *output* "val it =" v t)))
 
 (defn eval-print
-  "Eval and print an input string."
+  "Eval an input string and print the corresponding results."
   [input env]
   (let [parse-tree (->> input (parser/parse) (first))]
-    (case (first parse-tree)
-      :decl (handle-decl parse-tree env)
-      :expr (handle-expr parse-tree env))))
+    (try
+      (case (first parse-tree)
+       :decl (handle-decl parse-tree env)
+       :expr (handle-expr parse-tree env))
+      (catch clojure.lang.ExceptionInfo e
+        (println (.getMessage e) (ex-data e)))))) 
 
 (defn prompt-read
   "Prints a prompt and reads a string of input."
@@ -54,7 +57,7 @@
 (defn main []
   (intro)
   (refer 'mlj.lib)
-  (loop [env {}
+  (loop [env (mlj.lib/types)
          input (prompt-read)]
     (if (or (= input "exit") (nil? input))
       (println "Exiting MLJ.")
