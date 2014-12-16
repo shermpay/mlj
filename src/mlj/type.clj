@@ -44,15 +44,14 @@
 (defmulti type-of "Takes a ast node and returns its type"
   (fn [node & _] (ast/tag-of node)))
 
-(defmethod type-of :expr [[_ expr] env]
+(defmethod type-of :expr [[_ expr & more] env]
   (let [t (type-of expr env)]
-    ;; (if (and
-    ;;      (vector? t)
-    ;;      (= (ast/tag-of t) :fn))
-    ;;   (last t)                          ; Function application
-    ;;   t)
-    t
-    ))
+    (if (and
+         (vector? t)
+         (= (ast/tag-of t) :fn)
+         (not= nil more))
+      (last t)                          ; Function application
+      t)))
 
 (defmethod type-of :int [_ env]
   :int)
@@ -97,7 +96,6 @@
         param-types (pat->vec param)
         fn-env (merge env (apply hash-map (flatten param-types)))
         ret-type (type-of body fn-env)]
-    (println param-types ret-type)
     [:fn param-types ret-type]))
 
 (defmethod type-of :default [_ env]

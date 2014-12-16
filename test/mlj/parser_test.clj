@@ -97,4 +97,4 @@
 (deftest fn-test
   (testing "fn expression"
     (is (= (parser/parse "fn x => x")
-           '([:expr [:fn [:pat [:id "x"]] [:expr [:id "x"]]]]))) "basic"))
+           '([:expr [:fn [:id "x"] [:expr [:id "x"]]]]))) "basic"))

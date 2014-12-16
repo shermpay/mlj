@@ -39,7 +39,7 @@
     pattuple = lp pat ws* (<','> ws* pat)+ rp
     ttuple = lp type ws* (<'*'> ws* type)+ rp
 
-    pat = const | blank | id | lp pat rp | pattuple
+    <pat> = const | blank | id | lp pat rp | pattuple
     ann = <':'> ws* (type | ttuple)
     type = 'int' | 'bool' | 'char' | 'string' | 'real' | 'unit'
 
