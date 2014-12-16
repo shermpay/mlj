@@ -18,7 +18,7 @@
   else return it's value."
   [exp]
   (if (and (ifn? exp) ((complement vector?) exp))
-    (eval `(meta (var ~exp)))
+    (eval `(:type (meta (var ~exp))))
     (eval exp)))
 
 (defn handle-decl
@@ -32,9 +32,11 @@
 
 (defn handle-expr
   [expr env]
-  (let [t (type/type-of expr env)
-        v (eval (compiler/compile expr))]
-    (println *output* "val it =" v t)))
+  (let [t (type/type-of expr env)]
+    (try
+      (println *output* "val it =" (ml-eval (compiler/compile expr)) t)
+      (catch java.lang.RuntimeException e
+        (println *output* "Error: unbound variable:" (last (last expr)))))))
 
 (defn eval-print
   "Eval an input string and print the corresponding results."

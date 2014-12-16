@@ -3,12 +3,12 @@
   (:require [clojure.test :refer :all]
             [mlj.type :refer :all]))
 
-(deftest tuple-test
-  "Tests for primitive tuple operations"
-  (is (tuple? [1 2]))
-  (is (unit? []))
-  (is (= (tuple-type [1 \a "b"] {}) [:int :char :string]))
-  (is (= (tuple-repr [:int :char]) [:int '* :char])))
+;; (deftest tuple-test
+;;   "Tests for primitive tuple operations"
+;;   (is (tuple? [1 2]))
+;;   (is (unit? []))
+;;   (is (= (tuple-type [1 \a "b"] {}) [:int :char :string]))
+;;   (is (= (tuple-repr [:int :char]) [:int '* :char])))
 
 (deftest typechecking-primitives-test
   "Test for type checking primitives"

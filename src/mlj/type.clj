@@ -1,7 +1,7 @@
 ;;;; Sherman Pay
 
 ;;;; TODO: Change implementation of Types
-;;;; TODO: Add Generics
+;;;; TODO: Add Type variables
 ;;;; TODO: Catch errors in helper functions
 (ns mlj.type
   "ML (Hindley Milner) type system.
@@ -46,11 +46,13 @@
 
 (defmethod type-of :expr [[_ expr] env]
   (let [t (type-of expr env)]
-    (if (and
-         (vector? t)
-         (= (ast/tag-of t) :fn))
-      (last t)                          ; Function application
-      t)))
+    ;; (if (and
+    ;;      (vector? t)
+    ;;      (= (ast/tag-of t) :fn))
+    ;;   (last t)                          ; Function application
+    ;;   t)
+    t
+    ))
 
 (defmethod type-of :int [_ env]
   :int)
@@ -95,6 +97,7 @@
         param-types (pat->vec param)
         fn-env (merge env (apply hash-map (flatten param-types)))
         ret-type (type-of body fn-env)]
+    (println param-types ret-type)
     [:fn param-types ret-type]))
 
 (defmethod type-of :default [_ env]
@@ -127,13 +130,14 @@
 
 (defn check-ann [[node ann]]
   (= (type-of node) ann))
+
 ;;;;;;;;;;;;;;;;;;
 ;; Declarations ;;
 ;;;;;;;;;;;;;;;;;;
 (defn pat->vec
   "Takes a pattern node and converts it into a vector of pairs.
   The first index is the ids, and the second is the annotations."
-  [[_ [pat-type & pat]]]
+  [[pat-type & pat]]
   (if (= pat-type :id)
     (vector (first pat) (if (> (count pat) 1) (parse-ann (second pat))))
     (mapv #(pat->vec %) pat)))

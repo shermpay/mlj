@@ -13,11 +13,11 @@
   (str "-" (name k)))
 
 (defn usage
-  "Print usage string"
+  "Create and return usage string"
   []
   (println "Usage: mlj [option] filename\n")
   (doseq [[k v] flags]
-    (println "  " (key->flag k) "\t" v)))
+    (str "  " (key->flag k) "\t" v)))
 
 (defn compile-str
   "Compile a string. Throws ex-info if syntax error"
@@ -58,11 +58,14 @@
       (eval expr))
     (ns-publics module)))
 
+(defn compile-run-file [filename]
+  (-> filename
+      (compile-run)
+      (ns-map->val-str)
+      (println)))
+
 (defn -main [& args]
   (case (count args)
     0 (repl/main)
-    1 (-> (first args)
-          (compile-run)
-          (ns-map->val-str)
-          (println))
+    1 (compile-run-file (first args))
     (println (usage))))

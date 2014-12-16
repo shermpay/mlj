@@ -8,6 +8,9 @@
             [mlj.lang :as ml])
   (:gen-class))
 
+(defn- add-type [v t]
+  (alter-meta! v #(assoc % :type t)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; Primitive Generic ;;
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -20,6 +23,10 @@
 (ml/fun op* [x y] [:fn [:int :int] :int] := (c/* x y))
 (ml/fun div [x y] [:fn [:int :int] :int] := (c// x y))
 (ml/fun neg x [:fn :int :int] := (c/- x)) 
+
+;;;;;;;;;;;;;;
+;; Basic IO ;;
+;;;;;;;;;;;;;;
 
 (defn types []
   "Returns a map of stdlib types. Where the map is from {str -> vector}"
