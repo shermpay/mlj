@@ -47,16 +47,17 @@
   [path]
   (let [basename (last (clojure.string/split path #"/"))
         prefix (subs basename 0 (.indexOf basename "."))
-        module (symbol prefix)]
-    (in-ns module)
-    (clojure.core/refer-clojure)
-    (refer 'mlj.lib)
-    (doseq [expr (try
-                   (compile-str (slurp path))
-                   (catch clojure.lang.ExceptionInfo e
-                     (print (:details (ex-data e)))))]
-      (eval expr))
-    (ns-publics module)))
+        module (create-ns (symbol prefix))]
+    (binding [*ns* module]
+      (time
+       (clojure.core/refer-clojure))
+      (refer 'mlj.lib)
+      (doseq [expr (try
+                     (compile-str (slurp path))
+                     (catch clojure.lang.ExceptionInfo e
+                       (print (:details (ex-data e)))))]
+        (eval expr))
+      (ns-publics module))))
 
 (defn compile-run-file [filename]
   (-> filename

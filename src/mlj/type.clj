@@ -140,22 +140,32 @@
     (vector (first pat) (if (> (count pat) 1) (parse-ann (second pat))))
     (mapv #(pat->vec %) pat)))
 
+(defn get-patvec
+  [[_ [form-type pat exp]]]
+  (println pat)
+  (pat->vec pat))
+
+(defn check-patvec
+  [patvec tvec env]
+  (if (vector? tvec)
+    (do
+      (doseq [type patvec
+              t tvec]
+        (swap! env conj (check-patvec type t env)))
+      @env)
+    (let [[id pat-type] patvec]
+     (if (and (not= pat-type tvec) (not= nil pat-type))
+       (throw (ex-info "Pattern and expression in val dec don't agree."
+                       {:pattern pat-type
+                        :expression tvec}))
+       (apply hash-map [id tvec])))))
+
 (defn decl-val
   [[form-type pat exp] env]
-  ;; pairs ("x" :int, "y" :int)
-  ;; actual (:int :int)
-  (let [pairs (flatten (pat->vec pat))
-        actual (flatten (vector (type-of exp env)))]
-    (loop [[id type & more-pairs] pairs
-           [t & exp-types] actual
-           result {}]
-      (if (nil? t)
-        result
-        (if (not= t type)
-          (throw (ex-info "Pattern and expression in val dec don't agree."
-                          {:pattern type
-                           :expression t}))
-          (recur more-pairs exp-types (conj result [id t])))))))
+  "Takes a VAL declaration checks/infers the type and returns a mapping of symbol to type."
+  (let [patvec (pat->vec pat)
+        tvec (type-of exp env)]
+    (check-patvec patvec tvec (atom env))))
 
 (defn decl-id
   "Takes a valid declaration and returns a symbol and type
