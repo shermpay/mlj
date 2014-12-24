@@ -13,7 +13,6 @@
             [mlj.ast :as ast]
             [mlj.lib :as lib]))
 
-;; (declare type-of check-expr tuple?)
 (declare unit?)
 ;;;;;;;;;;;;;;;;;
 ;; Definitions ;;
@@ -37,7 +36,7 @@
 (defn tuple? [v] (vector? v))
 (defn unit? [v] (and (tuple? v) (empty? v)))
 
-(declare decl-val create-env pat->vec)
+(declare decl-val create-env pat->vec patvec->tvec)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Type checking helpers ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -96,7 +95,7 @@
         param-types (pat->vec param)
         fn-env (merge env (apply hash-map (flatten param-types)))
         ret-type (type-of body fn-env)]
-    [:fn param-types ret-type]))
+    [:fn (patvec->tvec param-types) ret-type]))
 
 (defmethod type-of :default [_ env]
   (throw (ex-info "Unable to obtain types." {:given _})))
@@ -142,8 +141,13 @@
 
 (defn get-patvec
   [[_ [form-type pat exp]]]
-  (println pat)
   (pat->vec pat))
+
+(defn patvec->tvec
+  [patvec]
+  (if (string? (first patvec))
+    (second patvec)
+    (mapv patvec->tvec patvec)))
 
 (defn check-patvec
   [patvec tvec env]
