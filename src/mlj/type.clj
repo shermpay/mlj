@@ -171,12 +171,19 @@
         tvec (type-of exp env)]
     (check-patvec patvec tvec (atom env))))
 
+(defn decl-fun
+  [[form-type [_ id] pat exp] env]
+  (let [fn-type (type-of [:fn pat exp] env)]
+    {id fn-type}))
+
 (defn decl-id
   "Takes a valid declaration and returns a symbol and type
   pair. Returned pair to be stored in the current type-env."
   [[form body] env]
   {:pre (= :decl form)}
-  (decl-val body env))
+  (case (first body)
+    :val (decl-val body env)
+    :fun (decl-fun body env)))
 
 (defn teval
   "Takes a parse-tree and does the following:

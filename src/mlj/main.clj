@@ -31,7 +31,8 @@
 (defn name-var->str
   "Convert a name and var to string. eg. x #'x -> val x = 1"
   [name var]
-  (str "val " name " = " (var-get var)))
+  (let [v (var-get var)]
+   (str "val " name " = " v)))
 
 (defn ns-map->val-str
   "Take a namespace map {symbol var} and transform it into
@@ -49,8 +50,7 @@
         prefix (subs basename 0 (.indexOf basename "."))
         module (create-ns (symbol prefix))]
     (binding [*ns* module]
-      (time
-       (clojure.core/refer-clojure))
+      (clojure.core/refer-clojure)
       (refer 'mlj.lib)
       (doseq [expr (try
                      (compile-str (slurp path))
@@ -59,7 +59,9 @@
         (eval expr))
       (ns-publics module))))
 
-(defn compile-run-file [filename]
+(defn compile-run-file
+  "Compiles and evaluates a file relative to project dir"
+  [filename]
   (-> filename
       (compile-run)
       (ns-map->val-str)
