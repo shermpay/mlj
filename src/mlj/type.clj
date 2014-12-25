@@ -8,7 +8,6 @@
   Includes a static type checker that type checks valid mlj forms.
   Also provides builtin mlj types."
   (:require [mlj.lang :as ml]
-            [mlj.core :as core]
             [mlj.parser :as parser]
             [mlj.ast :as ast]
             [mlj.lib :as lib]))
@@ -47,7 +46,7 @@
   (let [t (type-of expr env)]
     (if (and
          (vector? t)
-         (= (ast/tag-of t) :fn)
+         (list? :fn)
          (not= nil more))
       (last t)                          ; Function application
       t)))
@@ -95,7 +94,7 @@
         param-types (pat->vec param)
         fn-env (merge env (apply hash-map (flatten param-types)))
         ret-type (type-of body fn-env)]
-    [:fn (patvec->tvec param-types) ret-type]))
+    (list (patvec->tvec param-types) ret-type)))
 
 (defmethod type-of :default [_ env]
   (throw (ex-info "Unable to obtain types." {:given _})))
@@ -151,7 +150,7 @@
 
 (defn check-patvec
   [patvec tvec env]
-  (if (vector? tvec)
+  (if (vector? (first patvec))
     (do
       (doseq [type patvec
               t tvec]
@@ -186,13 +185,23 @@
     :fun (decl-fun body env)))
 
 (defn teval
-  "Takes a parse-tree and does the following:
+  "Takes a ast and does the following:
   If it is a declaration => return a map of it's new environment.
   If it is an expression => return it's type."
-  [parse-tree]
-  (case (ast/tag-of parse-tree)
-    :expr (type-of parse-tree)
-    :decl (decl-id parse-tree)))
+  [ast env]
+  (case (ast/tag-of ast)
+    :expr (type-of ast env)
+    :decl (decl-id ast env)))
+
+(defn check-prog
+  "Takes in a vector asts representing a program and type checks all forms."
+  [asts]
+  (let [env (atom {})]
+    (doseq [ast asts]
+      (let [res (teval ast @env)]
+        (if (map? res)
+          (swap! env conj res))))
+    @env))
 
 ;; (defmethod check :decl [[_ & [more]] env]
 ;;   (check more env))

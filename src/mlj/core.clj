@@ -3,6 +3,8 @@
   (:require [mlj.lang :as ml]
             [mlj.lib :as lib]))
 
+(defn )
+
 (def op-map
   "Map for various mlj forms.
   :builtin Builtin function
@@ -46,6 +48,7 @@
       meta
       :arglists
       first))
+
 (defn get-type
   [sym]
   (type (get-var sym)))
@@ -64,7 +67,3 @@
   (cond (vector? tsig) :tuple
         (list? tsig) :fn
         :else :prim))
-
-;; (defn syntax-pos
-;;   [k syntax]
-;;   (.indexOf (count-args k) syntax))

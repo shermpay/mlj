@@ -1,6 +1,8 @@
 (ns mlj.main
   "Main entry point"
-  (:require [mlj.repl :as repl]
+  (:require [mlj.runtime :as runtime]
+            [mlj.repl :as repl]
+            [mlj.type :as type]
             [mlj.compiler :as compiler]
             [mlj.parser :as parser])
   (:gen-class))
@@ -19,53 +21,62 @@
   (doseq [[k v] flags]
     (str "  " (key->flag k) "\t" v)))
 
-(defn compile-str
-  "Compile a string. Throws ex-info if syntax error"
+(defn parse-str
   [string]
   (let [parse-res (parser/parse string)]
     (if (parser/parse-error? parse-res)
       (throw (ex-info "Parse Error." {:type :parse-err
                                       :details parse-res}))
-      (compiler/compile-prog parse-res))))
+      parse-res)))
 
 (defn name-var->str
   "Convert a name and var to string. eg. x #'x -> val x = 1"
   [name var]
-  (let [v (var-get var)]
-   (str "val " name " = " v)))
+  (let [v (var-get var)
+        t (:type v)]
+   (str "val " name " = " v " " t)))
 
 (defn ns-map->val-str
-  "Take a namespace map {symbol var} and transform it into
+  "Take a namespace map {symbol var} and a type environemtn; transforms that into
   a string of val declarations"
-  [m]
+  [m env]
   (->> m
        (reduce-kv (fn [accum name var] (conj accum (name-var->str name var))) [])
        (interpose "\n")
        (apply str)))
 
-(defn compile-run
-  "Compile and run a file given its path."
+(defn create-module
+  "Creates a namespace that represents a module based on path to file."
   [path]
   (let [basename (last (clojure.string/split path #"/"))
-        prefix (subs basename 0 (.indexOf basename "."))
-        module (create-ns (symbol prefix))]
-    (binding [*ns* module]
-      (clojure.core/refer-clojure)
-      (refer 'mlj.lib)
-      (doseq [expr (try
-                     (compile-str (slurp path))
-                     (catch clojure.lang.ExceptionInfo e
-                       (print (:details (ex-data e)))))]
-        (eval expr))
-      (ns-publics module))))
+        prefix (subs basename 0 (.indexOf basename "."))]
+    (create-ns (symbol prefix))))
+
+(defn compile-run
+  "Compile a vector of program asts under a module"
+  [asts module]
+  (binding [*ns* module]
+    (refer 'mlj.lib)
+    (try
+      (compiler/compile-prog asts)
+      (catch clojure.lang.ExceptionInfo e
+        (print (:details (ex-data e)))))))
 
 (defn compile-run-file
   "Compiles and evaluates a file relative to project dir"
   [filename]
-  (-> filename
-      (compile-run)
-      (ns-map->val-str)
-      (println)))
+  (let [module (create-module filename)
+        prog-str (slurp filename)
+        asts (parse-str prog-str)
+        env (type/check-prog asts)
+        prog (compile-run asts module)]
+    (binding [*ns* module]
+      (clojure.core/refer-clojure)
+      (doseq [p prog]
+        (let [v (runtime/ml-eval p)
+              sym (:name (meta v))]
+          (println "val" sym "=" (runtime/val->str (var-get v))
+                   ":" (runtime/type->str (env (name sym)))))))))
 
 (defn -main [& args]
   (case (count args)

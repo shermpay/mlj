@@ -6,7 +6,6 @@
   Parse trees are nested vectors with a 'tag' representing the type of the node.
   Use parse-error? to validate the parsed result before using it."
   (:require [clojure.java.io :as io]
-            [mlj.core :as core]
             [instaparse.core :as insta])
   (:gen-class))
 

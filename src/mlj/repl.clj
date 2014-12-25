@@ -1,8 +1,10 @@
 (ns mlj.repl
   "REPL for MLJ lang"
-  (:require [mlj.compiler :as compiler]
+  (:require [mlj.runtime :as runtime]
+            [mlj.compiler :as compiler]
             [mlj.parser :as parser]
-            [mlj.type :as type]))
+            [mlj.type :as type])
+  (:gen-class))
 
 (defn intro
   "Prints an intro message."
@@ -11,15 +13,7 @@
   (println "Type exit to quit."))
 
 (def ^:dynamic *prompt* "- ")
-(def ^:dynamic *output* ">")
-
-(defn ml-eval
-  "Eval forms. If symbol hold function return it's function signature,
-  else return it's value."
-  [exp]
-  (if (and (ifn? exp) ((complement vector?) exp))
-    (eval `(:type (meta (var ~exp))))
-    (eval exp)))
+(def ^:dynamic *ps* ">")
 
 (defn handle-decl
   "Takes a declaration outputs to stdout and returns it's environment"
@@ -27,16 +21,16 @@
   (let [new-env (type/decl-id decl env)
         v (eval (compiler/compile decl))]
     (doseq [[sym t] new-env]
-      (println *output* "val" sym "=" (var-get v) t))
+      (println *ps* "val" sym "=" (var-get v) t))
     new-env))
 
 (defn handle-expr
   [expr env]
   (let [t (type/type-of expr env)]
     (try
-      (println *output* "val it =" (ml-eval (compiler/compile expr)) t)
+      (println *ps* "val it =" (runtime/ml-eval (compiler/compile expr)) t)
       (catch java.lang.RuntimeException e
-        (println *output* "Error: unbound variable:" (last (last expr)))))))
+        (println *ps* "Error: unbound variable:" (last (last expr)))))))
 
 (defn eval-print
   "Eval an input string and print the corresponding results."
