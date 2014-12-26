@@ -75,12 +75,14 @@
 ;;;;;;;;;;;;;;;;;;
 ;; Declarations ;;
 ;;;;;;;;;;;;;;;;;;
+
 (defmethod compile :val [[_ & [pat exp]]]
-  (let [p (compile pat)]
+  (let [p (compile pat)
+        e (compile exp)]
     (if (vector? p)
       ;; Compiles into a vector of defs => [(def x 1), (def y 2)]
-      (mapv #(list 'def %1 %2) p (compile exp))
-      (list 'def p (compile exp)))))
+      (mapv #(list 'def %1 %2) (flatten p) (flatten e))
+      (list 'def p e))))
 
 (defmethod compile :fun [[_ & [name & pat-body]]]
   (let [pats  (butlast pat-body)
