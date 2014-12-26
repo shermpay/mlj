@@ -152,9 +152,8 @@
   [patvec tvec env]
   (if (vector? patvec)
     (do
-      (doseq [fst patvec
-              t tvec]
-        (swap! env conj (check-patvec fst t env)))
+      (doseq [[pair t] (map vector patvec tvec)]
+        (swap! env conj (check-patvec pair t env)))
       @env)
     (let [[id pat-type] patvec]
      (if (and (not= pat-type tvec) (not= nil pat-type))
