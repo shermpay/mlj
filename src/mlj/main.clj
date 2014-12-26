@@ -52,7 +52,7 @@
         prefix (subs basename 0 (.indexOf basename "."))]
     (create-ns (symbol prefix))))
 
-(defn compile-run
+(defn compile-with-module
   "Compile a vector of program asts under a module"
   [asts module]
   (binding [*ns* module]
@@ -69,14 +69,15 @@
         prog-str (slurp filename)
         asts (parse-str prog-str)
         env (type/check-prog asts)
-        prog (compile-run asts module)]
+        prog (compile-with-module asts module)]
     (binding [*ns* module]
       (clojure.core/refer-clojure)
       (doseq [p prog]
-        (let [v (runtime/ml-eval p)
-              sym (:name (meta v))]
-          (println "val" sym "=" (runtime/val->str (var-get v))
-                   ":" (runtime/type->str (env (name sym)))))))))
+        (let [v (runtime/ml-eval p)]
+          (if (vector? v)
+            (doseq [s (map (partial runtime/output-str env) v)]
+              (println s))
+            (println (runtime/output-str env v))))))))
 
 (defn -main [& args]
   (case (count args)

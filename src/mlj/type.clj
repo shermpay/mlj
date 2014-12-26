@@ -135,7 +135,7 @@
   The first index is the ids, and the second is the annotations."
   [[pat-type & pat]]
   (if (= pat-type :id)
-    (vector (first pat) (if (> (count pat) 1) (parse-ann (second pat))))
+    (list (first pat) (if (> (count pat) 1) (parse-ann (second pat))))
     (mapv #(pat->vec %) pat)))
 
 (defn get-patvec
@@ -150,11 +150,11 @@
 
 (defn check-patvec
   [patvec tvec env]
-  (if (vector? (first patvec))
+  (if (vector? patvec)
     (do
-      (doseq [type patvec
+      (doseq [fst patvec
               t tvec]
-        (swap! env conj (check-patvec type t env)))
+        (swap! env conj (check-patvec fst t env)))
       @env)
     (let [[id pat-type] patvec]
      (if (and (not= pat-type tvec) (not= nil pat-type))

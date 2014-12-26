@@ -33,3 +33,11 @@
                                        " -> "
                                        (type->str ret)))
     (throw (ex-info "Invalid type" {:type t}))))
+
+(defn output-str [env v]
+  "Given a Var and it's type environment. Converts it into a output string"
+  (let [sym (:name (meta v))]
+    (apply str
+           (interpose " "
+                      (list "val" sym "=" (val->str (var-get v))
+                            ":" (type->str (env (name sym))))))))
