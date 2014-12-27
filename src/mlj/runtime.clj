@@ -11,9 +11,12 @@
 
 (defn val->str
   [v]
-  (if (fn? v)
-    "fn"
-    v))
+  (cond
+    (fn? v) "fn"
+    (vector? v) (str "(" (apply str (interpose ", "(mapv val->str v))) ")")
+    (string? v) (str \" v \")
+    (char? v) (str "#\""  v \")
+    :default v))
 
 (defn type->str
   [t]
