@@ -14,6 +14,7 @@
   (cond
     (fn? v) "fn"
     (vector? v) (str "(" (apply str (interpose ", "(mapv val->str v))) ")")
+    (list? v) (str "[" (apply str (interpose ", "(mapv val->str v))) "]")
     (string? v) (str \" v \")
     (char? v) (str "#\""  v \")
     :default v))
@@ -31,10 +32,11 @@
                                             (apply str))
                                        ")")
     ;; Fn
-    clojure.lang.PersistentList (let [[par ret] t]
-                                  (str (type->str par)
-                                       " -> "
-                                       (type->str ret)))
+    mlj.type.FnType (let [par (.param t)
+                          ret (.ret t)]
+                      (str (type->str par)
+                           " -> "
+                           (type->str ret)))
     (throw (ex-info "Invalid type" {:type t}))))
 
 (defn output-str [env v]

@@ -16,6 +16,13 @@
 ;;;;;;;;;;;;;;;;;
 ;; Definitions ;;
 ;;;;;;;;;;;;;;;;;
+(defrecord FnType [param ret]
+  java.lang.Object
+  (toString [this] (str param " -> " ret)))
+
+(defn fn-type? [t]
+  (instance? mlj.type.FnType t))
+
 (def ^:dynamic *type-map* {:int {:type java.lang.Long
                                 :type-fn integer?}
                            :real {:type java.lang.Double
@@ -36,18 +43,22 @@
 (defn unit? [v] (and (tuple? v) (empty? v)))
 
 (declare decl-val create-env pat->vec patvec->tvec)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Type checking helpers ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;
+;; Type Variables ;;
+;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;
+;; Type checking ;;
+;;;;;;;;;;;;;;;;;;;
 (defmulti type-of "Takes a ast node and returns its type"
   (fn [node & _] (ast/tag-of node)))
 
 (defmethod type-of :expr [[_ expr & more] env]
   (let [t (type-of expr env)]
-    (if (and
-         (vector? t)
-         (list? :fn)
-         (not= nil more))
+    (if (and (vector? t)
+             (fn-type? :fn)
+             (not= nil more))
       (last t)                          ; Function application
       t)))
 
@@ -94,7 +105,7 @@
         param-types (pat->vec param)
         fn-env (merge env (apply hash-map (flatten param-types)))
         ret-type (type-of body fn-env)]
-    (list (patvec->tvec param-types) ret-type)))
+    (FnType. (patvec->tvec param-types) ret-type)))
 
 (defmethod type-of :default [_ env]
   (throw (ex-info "Unable to obtain types." {:given _})))
@@ -163,8 +174,8 @@
        (apply hash-map [id tvec])))))
 
 (defn decl-val
-  [[form-type pat exp] env]
   "Takes a VAL declaration checks/infers the type and returns a mapping of symbol to type."
+  [[form-type pat exp] env]
   (let [patvec (pat->vec pat)
         tvec (type-of exp env)]
     (check-patvec patvec tvec (atom env))))
@@ -201,10 +212,3 @@
         (if (map? res)
           (swap! env conj res))))
     @env))
-
-;; (defmethod check :decl [[_ & [more]] env]
-;;   (check more env))
-
-;; (defmethod check :val [[_ [__ id & [ann]] expr] env]
-;;   (match-ann id ann)
-;;   (println id " " ann " " expr))
