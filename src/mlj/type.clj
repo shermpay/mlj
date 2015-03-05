@@ -1,10 +1,7 @@
 ;;;; Sherman Pay
 
-<<<<<<< Updated upstream
 ;;;; TODO: Change implementation of Types
 ;;;; TODO: Add Generics
-=======
->>>>>>> Stashed changes
 ;;;; DONE: Change implementation of Types
 ;;;; TODO: Implement Union Find data structure
 ;;;; TODO: Add Type variables
